@@ -134,11 +134,9 @@ class ProductResponse(BaseModel):
     class Config:
         from_attributes = True
 
-
 class ImageRankUpdate(BaseModel):
     id: int
     rank: float  # 👈 Change from position to rank
-
 
 class ImageRankUpdatePayload(BaseModel):
     updates: List[ImageRankUpdate]
@@ -153,11 +151,24 @@ class ImageRankUpdatePayload(BaseModel):
             raise ValueError("The highest rank cannot exceed 10")
         return updates
 
-
 class cpr(BaseModel):
     product_id: int
 
-        
+
+class CartCreate(BaseModel):
+    product_id: int
+    quantity: int
+
+
+class CartResponse(BaseModel):
+    cart_id: int
+    product_id: int
+    quantity: int
+    added_at: datetime
+    
+    class Config:
+        from_attributes = True
+
 class ReviewResponse(BaseModel):
     id: int
     user_id: int

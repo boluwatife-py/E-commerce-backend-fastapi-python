@@ -122,7 +122,6 @@ class Order(Base):
     coupon_id = Column(Integer, ForeignKey("coupons.coupon_id"), nullable=True)
     
 
-    # Relationships
     user = relationship("User", back_populates="orders")
     order_items = relationship("OrderItem", back_populates="order", cascade="all, delete-orphan")
     payment = relationship("Payment", back_populates="order", uselist=False, cascade="all, delete-orphan")
@@ -215,10 +214,8 @@ class Review(Base):
     comment = Column(Text, nullable=True)
     created_at = Column(TIMESTAMP, server_default=func.now())
 
-    # Constraints
     __table_args__ = (CheckConstraint("rating BETWEEN 1 AND 5", name="rating_check"),)
 
-    # Relationships
     user = relationship("User", back_populates="reviews")
     product = relationship("Product", back_populates="reviews")
 
@@ -234,7 +231,6 @@ class Wishlist(Base):
     product_id = Column(Integer, ForeignKey("products.product_id", ondelete="CASCADE"), nullable=False)
     created_at = Column(TIMESTAMP, server_default=func.now())
 
-    # Relationships
     user = relationship("User", back_populates="wishlists")
     product = relationship("Product", back_populates="wishlists")
 
@@ -276,12 +272,12 @@ class Cart(Base):
     quantity = Column(Integer, nullable=False)
     added_at = Column(TIMESTAMP, server_default=func.now())
 
-    # Constraints
+    
     __table_args__ = (
-        CheckConstraint("quantity > 0", name="quantity_check"),
+        CheckConstraint("quantity BETWEEN 1 AND 50", name="quantity_check"),
     )
 
-    # Relationships
+    
     user = relationship("User", back_populates="cart")
     product = relationship("Product", back_populates="cart")
 
@@ -294,24 +290,24 @@ class ProductReport(Base):
 
     id = Column(Integer, primary_key=True, autoincrement=True)
     product_id = Column(Integer, ForeignKey("products.product_id"), nullable=False)
-    user_id = Column(Integer, ForeignKey("users.user_id"), nullable=False)  # User who reported
-    seller_id = Column(Integer, ForeignKey("users.user_id"), nullable=False)  # Seller of the reported product
+    user_id = Column(Integer, ForeignKey("users.user_id"), nullable=False)
+    seller_id = Column(Integer, ForeignKey("users.user_id"), nullable=False)
     reason = Column(Text, nullable=False)
     reported_at = Column(TIMESTAMP, server_default=func.now())
 
     # Relationships
     product = relationship("Product", back_populates="reports")
-    reported_by = relationship("User", foreign_keys=[user_id], back_populates="reports_made")  # User who submitted the report
-    reported_seller = relationship("User", foreign_keys=[seller_id], back_populates="reports_received")  # Seller who got reported
+    reported_by = relationship("User", foreign_keys=[user_id], back_populates="reports_made")
+    reported_seller = relationship("User", foreign_keys=[seller_id], back_populates="reports_received")
 
 
 class PasswordResetToken(Base):
     __tablename__ = "password_reset_tokens"
 
-    token = Column(String, primary_key=True, index=True)  # Unique reset token
-    email = Column(String, index=True)  # Associated email
-    is_used = Column(Boolean, default=False)  # Check if token is used
-    created_at = Column(DateTime, default=datetime.utcnow)  # Timestamp
+    token = Column(String, primary_key=True, index=True)
+    email = Column(String, index=True)
+    is_used = Column(Boolean, default=False)
+    created_at = Column(DateTime, default=datetime.utcnow)
 
 
 class VerificationToken(Base):
@@ -334,7 +330,7 @@ class ProductImages(Base):
     id = Column(Integer, primary_key=True, autoincrement=True)
     product_id = Column(Integer, ForeignKey('products.product_id'), nullable=False)
     image_url = Column(String(255), nullable=False)
-    rank = Column(Float, nullable=False)  # 👈 Decimal/Float for flexible positioning
+    rank = Column(Float, nullable=False)
     created_at = Column(DateTime, default=func.now(), nullable=False)
 
     product = relationship('Product', back_populates="product_images")

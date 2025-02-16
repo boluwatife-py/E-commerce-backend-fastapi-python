@@ -1,7 +1,6 @@
-from fastapi import FastAPI, Request
-from app.exceptions import validation_exception_handler, authentication_exception_handler
+from fastapi import FastAPI
+from app.exceptions import validation_exception_handler
 from fastapi.exceptions import RequestValidationError
-from fastapi import HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import HTMLResponse
@@ -10,7 +9,6 @@ from fastapi.responses import HTMLResponse
 app = FastAPI(title="E-Commerce API")
 
 app.add_exception_handler(RequestValidationError, validation_exception_handler)
-app.add_exception_handler(HTTPException, authentication_exception_handler)
 
 app.mount("/static", StaticFiles(directory="static"), name="static")
 
@@ -64,16 +62,16 @@ def root():
 
 
 
-from app.routes import auth, misc, products, user, admins
+from app.routes import (auth, misc, products, user, admins, cart)
 
 from fastapi.exceptions import RequestValidationError
-from fastapi.responses import JSONResponse
 
 
-app.include_router(auth.router, prefix="/auth", include_in_schema=False) #  AUTH ROUTE
+app.include_router(auth.router, prefix="/auth", include_in_schema=True) #  AUTH ROUTE
 app.include_router(products.router, prefix="/products", include_in_schema=True) #  PRODUCTS ROUTE
-app.include_router(user.router, prefix="/user", include_in_schema=False) #  USERS ROUTE
-app.include_router(misc.router, prefix="/misc", include_in_schema=True) #  MISC ROUTE
+app.include_router(user.router, prefix="/user", include_in_schema=True) #  USERS ROUTE
+app.include_router(misc.router, prefix="/misc", include_in_schema=False) #  MISC ROUTE
 app.include_router(admins.router, prefix="/admin", include_in_schema=False) #  ADMIN ROUTE
+app.include_router(cart.router, prefix="/cart", include_in_schema=True) #  CART ROUTE
 if __name__ == "__main__":
     app.run()

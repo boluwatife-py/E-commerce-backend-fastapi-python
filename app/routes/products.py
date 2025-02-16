@@ -43,7 +43,7 @@ async def get_products(
                 selectinload(Product.currency),
                 selectinload(Product.category)
             )
-            .filter(Product.status == 'published')
+            .filter(Product.status == 'published', Product.stock_quantity > 0)
         )
 
         if category_name:
@@ -74,7 +74,7 @@ async def get_products(
         for product in products:
             first_image_url = None
             if product.product_images:
-                first_image = min(product.product_images, key=lambda img: img.position)
+                first_image = min(product.product_images, key=lambda img: img.rank)
                 first_image_url = first_image.image_url
 
             
@@ -106,7 +106,7 @@ async def get_products(
                     created_at=product.created_at,
                     updated_at=product.updated_at,
                     reviews=[],
-                    images=[ProductImageResponse(id=0, image_url=first_image_url, position=0)] if first_image_url else [],
+                    images=[ProductImageResponse(id=0, image_url=first_image_url, rank=0)] if first_image_url else [],
                     category=category_response,
                     currency=currency_response,
                 )
@@ -131,7 +131,7 @@ async def get_product(product_id: int, db: AsyncSession = Depends(get_db)):
                 selectinload(Product.category),
                 selectinload(Product.currency)
             )
-            .filter(Product.product_id == product_id, Product.status == 'published')
+            .filter(Product.product_id == product_id, Product.status == 'published', Product.stock_quantity > 0)
         )
 
         product = result.scalars().first()
@@ -321,7 +321,8 @@ async def delete_product(
         print(f"Error deleting product: {e}")
         raise HTTPException(status_code=500, detail="An error occurred while deleting the product.")
 
-@router.post("/upload/image/product")
+
+@router.post("/upload/image/product/")
 async def upload_product_image(
     current_user: Annotated[User, Depends(require_role(['merchant']))],
     product_id: int = Form(...),
@@ -397,17 +398,6 @@ async def reorder_images(
     payload: ImageRankUpdatePayload,
     db: AsyncSession = Depends(get_db),
 ):
-    """
-    Example Payload:
-    {
-        "updates": [
-            {"id": 8},
-            {"id": 9},
-            {"id": 10}
-        ]
-    }
-    Frontend should send all image IDs in the final desired order.
-    """
     try:
         result = db.execute(
             select(ProductImages)
@@ -425,7 +415,6 @@ async def reorder_images(
         if product.seller_id != current_user.user_id:
             raise HTTPException(status_code=403, detail="You do not have permission to reorder images for this product")
 
-        
         provided_ids = [update.id for update in payload.updates]
 
         db_image_ids = {image.id for image in images}
@@ -434,16 +423,30 @@ async def reorder_images(
         if missing_ids:
             raise HTTPException(status_code=400, detail=f"Image IDs {missing_ids} not found or do not belong to this product")
 
-        
         if set(provided_ids) != db_image_ids:
-            raise HTTPException(status_code=400, detail=f"All images for product {product_id} must be provided in the payload")
+            raise HTTPException(
+                status_code=400,
+                detail=f"All images for product {product_id} must be provided in the payload. Expected: {sorted(db_image_ids)}, Received: {sorted(provided_ids)}"
+            )
 
         
         id_to_image = {image.id: image for image in images}
-        for index, image_id in enumerate(provided_ids, start=1):
-            id_to_image[image_id].rank = float(index)
+        for update in payload.updates:
+            image_id = update.id
+            rank = update.rank
+            id_to_image[image_id].rank = float(rank)
 
         db.commit()
+
+        result = db.execute(
+            select(ProductImages)
+            .filter(ProductImages.product_id == product_id)
+            .order_by(ProductImages.rank)
+        )
+        updated_images = result.scalars().all()
+
+        for img in updated_images:
+            print(f"After commit - Image {img.id} -> Rank {img.rank}")
 
         return {"message": "Image positions updated successfully"}
 
@@ -461,4 +464,48 @@ async def reorder_images(
         raise HTTPException(status_code=500, detail=f"Unexpected error: {str(e)}")
 
 
+@router.delete("/product/{image_id}/images/")
+async def delete_product_image(
+    current_user: Annotated[User, Depends(require_role(['merchant']))],
+    image_id: int,
+    db: AsyncSession = Depends(get_db)):
+    try:
+        image = db.get(ProductImages, image_id)
+        
+        if not image:
+            raise HTTPException(status_code=404, detail="No images found with this identifier")
 
+        product = db.get(Product, image.product_id)
+        
+        if not product:
+            raise HTTPException(status_code=404, detail="Product not found")
+        
+        if product.seller_id != current_user.user_id:
+            raise HTTPException(status_code=403, detail="You do not have permission to delete this image")
+        
+        db.delete(image)
+        db.commit()
+        return {"message": "Image removed successfully"}
+    
+    except HTTPException as http_exc:
+        raise http_exc
+
+    except Exception as e:
+        db.rollback()
+        raise HTTPException(status_code=500, detail="An error occurred while deleting image.")
+
+
+# @router.post('/product/review/{product_id}/create')
+# def make_review(
+#     current_user: Annotated[User, Depends(require_role(['merchant']))],
+#     product_id: int,
+#     db: AsyncSession = Depends(get_db))
+# ):
+#     try:
+#         product = db.get(Product).filter(Product.id == product_id).first()
+        
+#         if not product:
+#             raise HTTPException(status_code=404, message="Product not found")
+        
+#         if product.seller_id == current_user.user_id:
+#             raise HTTPException(status_code=403, message="You can not review your own product")

@@ -37,7 +37,7 @@ def send_verification_email(email: EmailStr, token: str):
     subject = "Verify Your Email"
     body = f"Click the link to verify your email: {verification_link}\n\nThis link expires in 30 minutes."
 
-    send_mail(email=email, body=body, subject=subject)
+    return send_mail(email=email, body=body, subject=subject)
 
 
 async def successful_verified_email(email: EmailStr, name:str):

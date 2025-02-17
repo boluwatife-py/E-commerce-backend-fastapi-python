@@ -54,3 +54,28 @@ def send_reset_password_email(to_email, reset_token):
 
     except Exception as e:
         return False, f"Email sending failed: {str(e)}"
+
+
+
+def successful_upgrade_email_m(to_email, name):
+    msg = EmailMessage()
+    msg["Subject"] = "Successfully upgraded"
+    msg["From"] = settings.SMTP_USERNAME
+    msg["To"] = to_email
+    msg.set_content(f"congratulations {name} You have become a merchant")
+
+    try:
+        with smtplib.SMTP(settings.SMTP_SERVER, settings.SMTP_PORT, timeout=10) as server:
+            # server.starttls()
+            server.login(settings.SMTP_USERNAME, settings.SMTP_PASSWORD)
+            server.send_message(msg)
+        return True, "Email sent successfully"
+    
+    except smtplib.SMTPConnectError:
+        return False, "SMTP server is unavailable"
+
+    except smtplib.SMTPAuthenticationError:
+        return False, "SMTP authentication failed"
+
+    except Exception as e:
+        return False, f"Email sending failed: {str(e)}"

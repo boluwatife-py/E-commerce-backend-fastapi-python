@@ -1,9 +1,10 @@
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 from core.database import get_db
 from app.models import User
 from core.auth import require_role
 from typing import Annotated
+from core.email_utils import successful_upgrade_email_m
 
 router = APIRouter()
 
@@ -13,8 +14,16 @@ def upgrade_to_merchant(
     db: Session = Depends(get_db)
 ):
 
-    current_user.role = "merchant"
-    db.commit()
-    db.refresh(current_user)
+    try:
+        current_user.role = "merchant"
+        successful_upgrade_email_m(current_user.email, current_user.first_name)
+        db.commit()
+        db.refresh(current_user)
 
-    return {"message": "You have been upgraded to a merchant"}
+        return {"message": "You have been upgraded to a merchant"}
+    
+    except HTTPException as e:
+        raise e
+    
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"An unexpected error occurred: {str(e)}")

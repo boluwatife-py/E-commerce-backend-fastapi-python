@@ -6,9 +6,8 @@ from app.models import User, PasswordResetToken, VerificationToken
 from fastapi.security import OAuth2PasswordRequestForm
 from app.schemas import UserCreate, Token, TokenRefreshRequest, UserResponse, RequestVerificationLink, PasswordResetRequest, ResetPasswordRequest
 from core.auth import hash_password, verify_password, create_access_token, create_refresh_token, verify_token, create_verification_token, verify_verification_token, create_password_reset_token
-from core.email_utils import send_verification_email, send_reset_password_email
+from core.email_utils import send_verification_email, send_reset_password_email, successful_verified_email
 from sqlalchemy.exc import IntegrityError
-from smtplib import SMTPException
 from pydantic import ValidationError
 from jose import JWTError, ExpiredSignatureError
 from typing import Annotated, Optional
@@ -155,7 +154,7 @@ async def verify_account(token: str, db: Session = Depends(get_db)):
         if not email:
             raise HTTPException(status_code=400, detail="Invalid or expired token")
 
-        # Find token in DB and check validity
+        
         token_entry = db.query(VerificationToken).filter(
             VerificationToken.token == token,
             VerificationToken.is_active == True
@@ -172,6 +171,7 @@ async def verify_account(token: str, db: Session = Depends(get_db)):
         if user.is_active:
             return {"message": "Email is already verified"}
 
+        await successful_verified_email
         # Activate user and disable token
         user.is_active = True
         token_entry.is_active = False

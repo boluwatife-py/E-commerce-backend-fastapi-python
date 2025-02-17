@@ -40,6 +40,12 @@ def send_verification_email(email: EmailStr, token: str):
     send_mail(email=email, body=body, subject=subject)
 
 
+async def successful_verified_email(email: EmailStr, name:str):
+    subject = "Verify Your Email"
+    body = f"{name}, Your account have been verified successfully."
+
+    send_mail(email=email, body=body, subject=subject)
+
 def send_reset_password_email(to_email: EmailStr, reset_token: str):
     subject = "Reset Your Password"
     body = f"Click here to reset your password: {reset_token}"

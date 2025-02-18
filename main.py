@@ -69,7 +69,7 @@ from fastapi.exceptions import RequestValidationError
 
 app.include_router(auth.router, prefix="/auth", include_in_schema=True) #  AUTH ROUTE
 app.include_router(products.router, prefix="/products", include_in_schema=True) #  PRODUCTS ROUTE
-app.include_router(user.router, prefix="/user", include_in_schema=True) #  USERS ROUTE
+app.include_router(user.router, prefix="/user", include_in_schema=False) #  USERS ROUTE
 app.include_router(misc.router, prefix="/misc", include_in_schema=False) #  MISC ROUTE
 app.include_router(admins.router, prefix="/admin", include_in_schema=False) #  ADMIN ROUTE
 app.include_router(cart.router, prefix="/cart", include_in_schema=True) #  CART ROUTE

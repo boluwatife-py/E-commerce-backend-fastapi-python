@@ -1,7 +1,7 @@
 from fastapi import APIRouter, Depends, HTTPException, UploadFile, File, Form
 from core.database import get_db
-from app.models import Product, User, Category, ProductImages, Currency
-from app.schemas import ProductResponse, ProductCreate, cpr, CategoryResponse, CurrencyResponse, ProductImageResponse, ImageRankUpdatePayload
+from app.models import Product, User, Category, ProductImages, Currency, Review
+from app.schemas import ProductResponse, ProductCreate, cpr, CategoryResponse, CurrencyResponse, ProductImageResponse, ImageRankUpdatePayload, ReviewCreate
 from core.auth import require_role
 from typing import Annotated, Optional, List
 from sqlalchemy.exc import SQLAlchemyError
@@ -499,13 +499,26 @@ async def delete_product_image(
 # def make_review(
 #     current_user: Annotated[User, Depends(require_role(['merchant']))],
 #     product_id: int,
-#     db: AsyncSession = Depends(get_db))
+#     data: ReviewCreate,
+#     db: AsyncSession = Depends(get_db),
 # ):
 #     try:
-#         product = db.get(Product).filter(Product.id == product_id).first()
+#         product = db.get(Product).filter(Product.id == product_id).first(): User
         
 #         if not product:
 #             raise HTTPException(status_code=404, message="Product not found")
         
 #         if product.seller_id == current_user.user_id:
 #             raise HTTPException(status_code=403, message="You can not review your own product")
+        
+#         new_review = Review(
+#             user_id = current_user.user_id,
+#             product_id = product_id,
+#             rating = data.rating,
+#             comment = data.comment
+#         )
+        
+#         db.add(new_review)
+#         db.commit()
+#         db.refresh(new_review)
+        

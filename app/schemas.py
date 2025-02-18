@@ -154,11 +154,9 @@ class ImageRankUpdatePayload(BaseModel):
 class cpr(BaseModel):
     product_id: int
 
-
 class CartCreate(BaseModel):
     product_id: int
     quantity: int
-
 
 class CartResponse(BaseModel):
     cart_id: int
@@ -175,7 +173,17 @@ class ReviewResponse(BaseModel):
     rating: int
     comment: Optional[str] = None
 
-
+class ReviewCreate(BaseModel):
+    rating: int = 2
+    comment: str
+    
+    @validator('rating')
+    def validate_rating(cls, v):
+        rate_range = [1, 2, 3, 4, 5]
+        if not v in rate_range:
+            raise ValueError("Range should be from 1 - 5.")
+        return v
+    
 # Enum for order status
 class OrderStatus(str, Enum):
     pending = "pending"

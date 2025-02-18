@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, HTTPException, Header
+from fastapi import APIRouter, Depends, HTTPException, Header, BackgroundTasks
 from sqlalchemy.orm import Session
 from core.database import get_db
 from app.crud import get_user_by_email, get_user_by_phone
@@ -147,7 +147,7 @@ async def request_new_verification_link(data: RequestVerificationLink, db: Sessi
 
 
 @router.get('/verify-email/')
-async def verify_account(token: str, db: Session = Depends(get_db)):
+async def verify_account(token: str, bg_tasks: BackgroundTasks, db: Session = Depends(get_db), ):
     try:
         email = verify_verification_token(token)
 
@@ -171,7 +171,8 @@ async def verify_account(token: str, db: Session = Depends(get_db)):
         if user.is_active:
             return {"message": "Email is already verified"}
 
-        await successful_verified_email
+        bg_tasks.add_task(successful_verified_email, user.email, user.first_name)
+        
         # Activate user and disable token
         user.is_active = True
         token_entry.is_active = False

@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, BackgroundTasks
 from sqlalchemy.orm import Session
 from core.database import get_db
 from app.models import User
@@ -11,15 +11,15 @@ router = APIRouter()
 @router.get("/upgrade-to-merchant")
 def upgrade_to_merchant(
     current_user: Annotated[User, Depends(require_role(['buyer']))],
+    bg_tasks: BackgroundTasks,
     db: Session = Depends(get_db)
 ):
 
     try:
         current_user.role = "merchant"
-        successful_upgrade_email_m(current_user.email, current_user.first_name)
         db.commit()
         db.refresh(current_user)
-
+        bg_tasks.add_task(successful_upgrade_email_m, current_user.email, current_user.first_name)
         return {"message": "You have been upgraded to a merchant"}
     
     except HTTPException as e:

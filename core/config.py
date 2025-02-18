@@ -18,5 +18,6 @@ class Settings:
     BASE_URL = os.getenv("BASE_URL")
     VERIFICATION_TOKEN_EXPIRE_MINUTES: int = 10
     RESET_TOKEN_EXPIRE_MINUTES: int = 10
+    MAX_EMAIL_RETRIES: int = 3
 
 settings = Settings()

@@ -6,9 +6,30 @@ from typing import Annotated, List
 from core.database import get_db
 from app.schemas import CartCreate, CartResponse
 
-
 router = APIRouter()
 
+
+@router.get('/items/', response_model=List[CartResponse])
+def get_cart_items(
+    current_user: Annotated[User, Depends(get_current_user)],
+    db: AsyncSession = Depends(get_db)):
+    try:
+        cart_item = db.query(Cart).filter(Cart.user_id == current_user.user_id)
+        cart_response = []
+        
+        for item in cart_item:
+            cart_response.append(
+                CartResponse.model_validate(item)
+            )
+        return cart_response
+        
+    except HTTPException as http_exc:
+        raise http_exc
+
+    except Exception as e:
+        db.rollback()
+        print(e)
+        raise HTTPException(status_code=500, detail="An error occurred while fetching cart items.")
 
 @router.post('/create/{product_id}/product/', response_model=CartResponse)
 def add_item_to_cart(
@@ -55,29 +76,7 @@ def add_item_to_cart(
         print(e)
         raise HTTPException(status_code=500, detail="An error occurred while adding product to cart")
 
-@router.get('/items/', response_model=List[CartResponse])
-def get_cart_items(
-    current_user: Annotated[User, Depends(get_current_user)],
-    db: AsyncSession = Depends(get_db)):
-    try:
-        cart_item = db.query(Cart).filter(Cart.user_id == current_user.user_id)
-        cart_response = []
-        
-        for item in cart_item:
-            cart_response.append(
-                CartResponse.model_validate(item)
-            )
-        return cart_response
-        
-    except HTTPException as http_exc:
-        raise http_exc
-
-    except Exception as e:
-        db.rollback()
-        print(e)
-        raise HTTPException(status_code=500, detail="An error occurred while fetching cart items.")
-
-@router.put('/product/{cart_id}')
+@router.patch('/product/{cart_id}')
 def edit_cart_item(
     current_user: Annotated[User, Depends(get_current_user)],
     cart_id: int,

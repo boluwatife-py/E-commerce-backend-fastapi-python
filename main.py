@@ -42,10 +42,10 @@ def get_offline_docs():
 
 
 ALLOWED_ORIGINS = [
-    # "http://localhost:3000",
-    # "http://127.0.0.1:3000",
-    # "http://localhost:8000",
-    # "http://127.0.0.1:8000"
+    "http://localhost:3000",
+    "http://127.0.0.1:3000",
+    "http://localhost:8000",
+    "http://127.0.0.1:8000"
 ]
 
 app.add_middleware(
@@ -62,7 +62,7 @@ def root():
 
 
 
-from app.routes import (auth, misc, products, user, admins, cart)
+from app.routes import (auth, misc, products, user, admins, cart, payment)
 
 from fastapi.exceptions import RequestValidationError
 
@@ -72,5 +72,6 @@ app.include_router(user.router, prefix="/user", include_in_schema=True) #  USERS
 app.include_router(admins.router, prefix="/admin", include_in_schema=False) #  ADMIN ROUTE
 app.include_router(products.router, prefix="/products", include_in_schema=True) #  PRODUCTS ROUTE
 app.include_router(cart.router, prefix="/cart", include_in_schema=True) #  CART ROUTE
+app.include_router(payment.router, prefix="/payment", include_in_schema=True) #  CART ROUTE
 app.include_router(misc.router, prefix="/misc", include_in_schema=True) #  MISC ROUTE
 

@@ -47,10 +47,10 @@ async def request_to_add_phone(
             created_at = datetime.now(),
         )
 
-        # try:
-        #     sender = send_otp_sms(phone_number=phone_number, otp=otp)
-        # except Exception:
-        #     raise
+        try:
+            sender = send_otp_sms(phone_number=phone_number, otp=otp)
+        except Exception:
+            raise
         
         db.add(new_otp)
         db.commit()

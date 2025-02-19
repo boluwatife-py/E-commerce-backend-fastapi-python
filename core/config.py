@@ -30,4 +30,6 @@ class Settings:
 
     OTP_EXPIRY_MINUTES = 5
 
+    PAYSTACK_SECRET_KEY = os.getenv("PAYSTACK_SECRET_KEY")
+
 settings = Settings()

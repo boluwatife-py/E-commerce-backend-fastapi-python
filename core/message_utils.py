@@ -1,5 +1,6 @@
 import httpx
 from .config import settings
+import requests
 
 def send_otp_sms(phone_number: str, otp: int) -> str:
     """

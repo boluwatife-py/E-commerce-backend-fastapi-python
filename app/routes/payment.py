@@ -5,13 +5,12 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.models import User, Order
 from core.database import get_db
 from core.auth import get_current_user
+from core.config import settings
 
 
 router = APIRouter(tags=['Payments'])
 
-PAYSTACK_SECRET_KEY = "sk_test_xxxx"
-
-@router.post("/paystack/initiate-payment/")
+@router.post("/paystack/order/{order_id}/initiate-payment/")
 async def initiate_payment(
     order_id: int,
     current_user: Annotated[User, Depends(get_current_user)],
@@ -27,11 +26,11 @@ async def initiate_payment(
     async with httpx.AsyncClient() as client:
         response = await client.post(
             "https://api.paystack.co/transaction/initialize",
-            headers={"Authorization": f"Bearer {PAYSTACK_SECRET_KEY}"},
+            headers={"Authorization": f"Bearer {settings.PAYSTACK_SECRET_KEY}"},
             json={
                 "email": current_user.email,
                 "amount": int(order.total_amount * 100),
-                "callback_url": "https://yourapp.com/verify-payment"
+                "callback_url": "https://localhost:8000/payment/paystack/verify-payment"
             }
         )
 
@@ -48,7 +47,7 @@ async def verify_payment(reference: str, db: AsyncSession = Depends(get_db)):
     async with httpx.AsyncClient() as client:
         response = await client.get(
             f"https://api.paystack.co/transaction/verify/{reference}",
-            headers={"Authorization": f"Bearer {PAYSTACK_SECRET_KEY}"}
+            headers={"Authorization": f"Bearer {settings.PAYSTACK_SECRET_KEY}"}
         )
 
     data = response.json()

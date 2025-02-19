@@ -1,18 +1,17 @@
 from datetime import datetime, timedelta
 from passlib.context import CryptContext
 from fastapi import HTTPException, Depends, status
-from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm
+from fastapi.security import OAuth2PasswordBearer
 from core.config import settings
 from jose import jwt, JWTError
 from app.models import User
 from typing import Optional, Annotated
 from sqlalchemy.orm import Session
 from .database import get_db
-from fastapi import Form
-from pydantic import EmailStr
+import secrets, time
 
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
-oauth2_scheme = OAuth2PasswordBearer(tokenUrl="auth/login")
+oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/auth/login/")
 
 def hash_password(password: str) -> str:
     return pwd_context.hash(password)
@@ -39,12 +38,10 @@ def verify_token(token: str = Depends(oauth2_scheme)):
     except jwt.PyJWTError:
         raise HTTPException(status_code=401, detail="Invalid token")
 
-
 def create_verification_token(email: str):
     expire = datetime.utcnow() + timedelta(minutes=settings.VERIFICATION_TOKEN_EXPIRE_MINUTES)
     to_encode = {"sub": email, "exp": expire}
     return jwt.encode(to_encode, settings.SECRET_KEY, algorithm=settings.ALGORITHM)
-
 
 def verify_verification_token(token: str):
     try:
@@ -53,12 +50,10 @@ def verify_verification_token(token: str):
     except JWTError:
         return None
 
-
 def create_password_reset_token(email: str) -> str:
     expire = datetime.utcnow() + timedelta(minutes=settings.RESET_TOKEN_EXPIRE_MINUTES)
     payload = {"sub": email, "exp": expire}
     return jwt.encode(payload, settings.SECRET_KEY, algorithm=settings.ALGORITHM)
-
 
 def get_current_user(
     token: Annotated[str, Depends(oauth2_scheme)], 
@@ -90,7 +85,6 @@ def get_current_user(
     except JWTError:
         raise credentials_exception
 
-
 def require_role(required_roles: list[str]):
     """Dependency to check if the user has the required role."""
     def role_checker(user: User = Depends(get_current_user)):
@@ -100,15 +94,33 @@ def require_role(required_roles: list[str]):
 
     return role_checker
 
+def require_user_profile():
+    """Dependency to check if the user has a profile."""
+    def data_checker(user: User = Depends(get_current_user)):
+        if not user.data:
+            raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail=f"Access denied, user info is required")
+        return user
+    
+    return data_checker
 
-# from fastapi import Form
-# from fastapi.security import OAuth2PasswordRequestForm
+def create_otp():
+    otp = secrets.randbelow(1000000)
+    otp = str(otp).zfill(6)
 
-class OAuth2PasswordRequestFormWithEmail:
-    def __init__(
-        self,
-        email: str = Form(...),  # Form fields must be explicitly defined
-        password: str = Form(...)
-    ):
-        self.username = email  # FastAPI's OAuth expects "username"
-        self.password = password
+    return otp
+
+def verify_otp(db_timestamp: time, r_otp: str, i_otp: str) -> bool:
+    try:
+        current_timestammp = int(time.time())
+        expiry_duration = settings.OTP_EXPIRY_MINUTES * 60
+        expiry_timestamp = db_timestamp + expiry_duration
+
+        if current_timestammp > expiry_timestamp:
+            return False, 'Expired OTP'
+        
+        if r_otp != i_otp:
+            return False, 'Incorrect OTP'
+        
+        return True, 'Successfully Verified OTP'
+    except Exception as e:
+        return False, e

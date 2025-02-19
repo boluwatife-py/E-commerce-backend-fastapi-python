@@ -15,6 +15,9 @@ class Settings:
     SMTP_PORT = os.getenv("SMTP_PORT")
     SMTP_USERNAME = os.getenv("SMTP_USERNAME")
     SMTP_PASSWORD = os.getenv("SMTP_PASSWORD")
+    MAIL_TIMEOUT: int = 10
+
+
     BASE_URL = os.getenv("BASE_URL")
     VERIFICATION_TOKEN_EXPIRE_MINUTES: int = 10
     RESET_TOKEN_EXPIRE_MINUTES: int = 10
@@ -24,5 +27,7 @@ class Settings:
     SMSCOUNTRY_PASSWORD = os.getenv("SMSCOUNTRY_PASSWORD")
     SMSC_SENDER_ID = os.getenv("SENDER_ID")
     SMSC_URL = os.getenv("SMSC_URL")
+
+    OTP_EXPIRY_MINUTES = 5
 
 settings = Settings()

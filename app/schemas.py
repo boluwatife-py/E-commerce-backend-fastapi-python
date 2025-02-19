@@ -23,10 +23,40 @@ class UserCreate(UserBase):
         return v
 
 class UserResponse(BaseModel):
-    email: EmailStr = Field(..., example="example@example.com")
+    email: EmailStr = Field(..., example="user@example.com")
 
 class RequestVerificationLink(BaseModel):
     email: EmailStr = Field(..., example="user@example.com")
+
+
+class OTPRequest(BaseModel):
+    phone_number: str = Field(..., example='+91234567890')
+
+    @validator("phone_number")
+    def validate_phone_number(cls, value):
+        
+        pattern = re.compile(r"^\+?[1-9]\d?\s?\d{9,14}$")
+        if not pattern.match(value):
+            raise ValueError("Invalid phone number. Must be in international format, e.g., +1234567890")
+        return value
+
+
+class OTPVerify(OTPRequest):
+    otp: str = Field(..., example='123456')
+
+    @validator('otp')
+    def validate_otp(cls, value):
+        if not value.isdigit():
+            raise ValueError('Invalid OTP. Must be a digit')
+        if not len(str(value)) == 6:
+            raise ValueError("Invalid OTP. must be 6 characters")
+        return value
+
+
+
+
+
+
 
 class ProductCreate(BaseModel):
     name: str
@@ -178,9 +208,9 @@ class ReviewCreate(BaseModel):
         return v
 
 
+
 class CheckoutRequestItem(BaseModel):
     cart_id: int
-
 
 # Enum for order status
 class OrderStatus(str, Enum):
@@ -194,8 +224,6 @@ class PaymentStatus(str, Enum):
     pending = "pending"
     completed = "completed"
     failed = "failed"
-
-
 
 class OrderBase(BaseModel):
     user_id: int

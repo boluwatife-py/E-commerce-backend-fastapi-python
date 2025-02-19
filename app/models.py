@@ -18,7 +18,7 @@ class User(Base):
     role = Column(String(20), nullable=False, default="buyer")
     created_at = Column(TIMESTAMP, server_default=func.now())
 
-    profile = relationship("UserProfile", back_populates="user", uselist=False, cascade="all, delete-orphan")
+    data = relationship("UserData", back_populates="user", uselist=False, cascade="all, delete-orphan")
 
     # Relationships with other tables
     product = relationship("Product", back_populates="seller", cascade="all, delete", lazy="dynamic")
@@ -28,6 +28,7 @@ class User(Base):
     wishlists = relationship("Wishlist", back_populates="user", cascade="all, delete-orphan")
     cart = relationship("Cart", back_populates="user", cascade="all, delete-orphan")
     verification_tokens = relationship("VerificationToken", back_populates="user")
+    otps = relationship("Otp", back_populates="user")
 
     reports_received = relationship(
         "ProductReport",
@@ -49,8 +50,8 @@ class User(Base):
         return f"<User {self.email} ({self.role})>"
 
 
-class UserProfile(Base):
-    __tablename__ = "user_profiles"
+class UserData(Base):
+    __tablename__ = "user_data"
 
     profile_id = Column(Integer, primary_key=True, autoincrement=True)
     user_id = Column(Integer, ForeignKey("users.user_id", ondelete="CASCADE"), unique=True, nullable=False)
@@ -62,11 +63,10 @@ class UserProfile(Base):
     zip_code = Column(String(10))
     country = Column(String(50))
 
-    user = relationship("User", back_populates="profile")
+    user = relationship("User", back_populates="data")
 
     def __repr__(self):
-        return f"<UserProfile {self.first_name} {self.last_name}>"
-
+        return f"<UserData {self.first_name} {self.last_name}>"
 
     
 class Product(Base):
@@ -349,9 +349,6 @@ class ProductImages(Base):
 
     product = relationship('Product', back_populates="product_images")
 
-    
-
-
 
 class Currency(Base):
     __tablename__ = 'currencies'
@@ -362,4 +359,17 @@ class Currency(Base):
 
     products = relationship('Product', back_populates='currency')
 
+
+class Otp(Base):
+    __tablename__ = 'otp_s'
+
+    id = Column(Integer, primary_key=True, index=True, autoincrement=True)
+    user_id = Column(Integer, ForeignKey('users.user_id'), nullable=False)
+    
+    otp = Column(Integer, index=True, nullable=False)
+    phone = Column(String, nullable=False, index=True)
+    is_active = Column(Boolean, default=True)
+    created_at = Column(DateTime, default=func.now())
+    
+    user = relationship("User", back_populates="otps")
 

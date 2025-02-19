@@ -79,7 +79,7 @@ def add_item_to_cart(
         print(e)
         raise HTTPException(status_code=500, detail="An error occurred while adding product to cart")
 
-@router.patch('/product/{cart_id}')
+@router.put('/product/{cart_id}')
 def edit_cart_item(
     current_user: Annotated[User, Depends(get_current_user)],
     cart_id: int,

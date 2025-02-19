@@ -1,10 +1,10 @@
 from fastapi import APIRouter, Depends, HTTPException, Header, BackgroundTasks
 from core.database import get_db
-from app.crud import get_user_by_email, get_user_by_phone
+from app.crud import get_user_by_email
 from app.models import User, PasswordResetToken, VerificationToken
 from fastapi.security import OAuth2PasswordRequestForm
-from app.schemas import UserCreate, Token, TokenRefreshRequest, UserResponse, RequestVerificationLink, PasswordResetRequest, ResetPasswordRequest, OTPRequest
-from core.auth import hash_password, verify_password, create_access_token, create_refresh_token, verify_token, create_verification_token, verify_verification_token, create_password_reset_token, get_current_user
+from app.schemas import UserCreate, Token, TokenRefreshRequest, UserResponse, RequestVerificationLink, PasswordResetRequest, ResetPasswordRequest
+from core.auth import hash_password, verify_password, create_access_token, create_refresh_token, verify_token, create_verification_token, verify_verification_token, create_password_reset_token, oauth2_scheme
 from core.email_utils import send_verification_email, send_reset_password_email, successful_verified_email
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -24,7 +24,7 @@ responces = {
                 "example": {
                     "detail": "Validation Error",
                     "errors": [
-                        {"field": "body.phone", "message": "Invalid phone number format"},
+                        {"field": "body.email", "message": "Invalid email format"},
                         {"field": "body.password", "message": "Password must meet security requirements"}
                     ]
                 }
@@ -193,7 +193,6 @@ async def login(
     db: AsyncSession = Depends(get_db)):
     try:
         user = db.query(User).filter(User.email == form_data.username).first()
-        print(form_data.password)
         if not user or not verify_password(form_data.password, user.password_hash):
             raise HTTPException(status_code=401, detail="Invalid credentials")
         
@@ -351,16 +350,5 @@ async def reset_password(data: ResetPasswordRequest, db: AsyncSession = Depends(
         print(f"Unexpected error: {str(e)}")  # Replace with proper logging
         raise HTTPException(status_code=500, detail="An error occurred while resetting the password.")
 
-
-@router.post('/send-otp/')
-async def send_otp(
-    current_user: Annotated[User, Depends(get_current_user)],
-    data: OTPRequest,
-    db: AsyncSession = Depends(get_db)
-):
-    phone = data.phone_number
-
-    if get_user_by_phone(db, phone):
-        raise HTTPException(status_code=400, detail="Phone already registered")
     
      

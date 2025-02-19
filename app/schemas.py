@@ -68,9 +68,6 @@ class ProfileUpdateResponse(BaseModel):
 class RoleUpdateResponse(BaseModel):
     detail: str = Field(..., example="User role updated successfully")
 
-
-
-
 class ProductCreate(BaseModel):
     name: str
     description: Optional[str] = None
@@ -219,12 +216,6 @@ class ReviewCreate(BaseModel):
         if not v in rate_range:
             raise ValueError("Range should be from 1 - 5.")
         return v
-
-
-
-class CheckoutRequestItem(BaseModel):
-    cart_id: int
-
 # Enum for order status
 class OrderStatus(str, Enum):
     pending = "pending"

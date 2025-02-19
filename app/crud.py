@@ -1,13 +1,10 @@
-from sqlalchemy.orm import Session
+from sqlalchemy.ext.asyncio import AsyncSession
 from .models import User, UserData
-from .schemas import UserCreate
-from passlib.context import CryptContext
 
-pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 
-def get_user_by_email(db: Session, email: str):
+def get_user_by_email(db: AsyncSession, email: str):
     return db.query(User).filter(User.email == email).first()
 
-def get_user_by_phone(db: Session, phone: str):
+def get_user_by_phone(db: AsyncSession, phone: str):
     return db.query(UserData).filter(UserData.phone == phone).first()
 

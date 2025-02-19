@@ -1,8 +1,7 @@
-from sqlalchemy import Column, Integer, String, Text, TIMESTAMP, ForeignKey, DECIMAL, Date, CheckConstraint, Boolean, Float
+from sqlalchemy import Column, Integer, String, Text, TIMESTAMP, ForeignKey, DECIMAL, Date, CheckConstraint, Boolean, Float, DateTime
 from sqlalchemy.orm import relationship
 from sqlalchemy.sql import func
 from core.database import Base
-from sqlalchemy import Column, String, Boolean, DateTime
 from datetime import datetime
 
 
@@ -161,7 +160,6 @@ class OrderItem(Base):
     unit_price = Column(DECIMAL(10, 2), nullable=False)
     total_price = Column(DECIMAL(10, 2), nullable=False)
 
-    # Relationships
     order = relationship("Order", back_populates="order_items")
     product = relationship("Product", back_populates="order_items")
 

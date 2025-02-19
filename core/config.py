@@ -4,6 +4,9 @@ from dotenv import load_dotenv
 load_dotenv()  # Load environment variables from a .env file
 
 class Settings:
+
+    APP_NAME = 'ECOMMERCE DB'
+
     SECRET_KEY: str = os.getenv("SECRET_KEY", "your_default_secret")
     REFRESH_SECRET_KEY: str = os.getenv("REFRESH_SECRET_KEY", "your_default_refresh_secret")
     ALGORITHM: str = "HS256"
@@ -23,10 +26,9 @@ class Settings:
     RESET_TOKEN_EXPIRE_MINUTES: int = 10
     MAX_EMAIL_RETRIES: int = 3
 
-    SMSCOUNTRY_USERNAME = os.getenv("SMSCOUNTRY_USERNAME")
-    SMSCOUNTRY_PASSWORD = os.getenv("SMSCOUNTRY_PASSWORD")
-    SMSC_SENDER_ID = os.getenv("SENDER_ID")
-    SMSC_URL = os.getenv("SMSC_URL")
+    TWILIO_ACCOUNT_SID = os.getenv("TWILIO_ACCOUNT_SID")
+    TWILIO_AUTH_TOKEN = os.getenv("TWILIO_AUTH_TOKEN")
+    TWILIO_PHONE_NUMBER = os.getenv("TWILIO_PHONE_NUMBER")
 
     OTP_EXPIRY_MINUTES = 5
 

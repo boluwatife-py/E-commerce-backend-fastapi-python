@@ -14,12 +14,12 @@ def send_otp_sms(phone_number: str, otp: int) -> str:
         client = Client(settings.TWILIO_ACCOUNT_SID, settings.TWILIO_AUTH_TOKEN)
 
         message = client.messages.create(
-            body=f"Your OTP is {otp}",
+            body=f"Your verification code for {settings.APP_NAME} is: {otp}. This code will expire in 10 minutes. Do not share it with anyone. If you didn't request this, please ignore this message.",
             from_=settings.TWILIO_PHONE_NUMBER,  # Your Twilio number
             to=phone_number
         )
 
-        return message.sid  # Return message SID for tracking
+        return message.sid
 
     except Exception as e:
         raise RuntimeError(f"Failed to send OTP via Twilio: {str(e)}")

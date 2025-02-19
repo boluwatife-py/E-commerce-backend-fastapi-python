@@ -48,8 +48,7 @@ async def request_to_add_phone(
         )
 
         try:
-            sender = send_otp_sms(phone_number=phone_number, otp=otp)
-            print(sender)
+            send_otp_sms(phone_number=phone_number, otp=otp)
         except Exception:
             raise
         

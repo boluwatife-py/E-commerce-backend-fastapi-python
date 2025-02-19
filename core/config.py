@@ -20,4 +20,9 @@ class Settings:
     RESET_TOKEN_EXPIRE_MINUTES: int = 10
     MAX_EMAIL_RETRIES: int = 3
 
+    SMSCOUNTRY_USERNAME = os.getenv("SMSCOUNTRY_USERNAME")
+    SMSCOUNTRY_PASSWORD = os.getenv("SMSCOUNTRY_PASSWORD")
+    SENDER_ID = os.getenv("SENDER_ID")
+    SMSC_URL = os.getenv("SMSC_URL")
+
 settings = Settings()

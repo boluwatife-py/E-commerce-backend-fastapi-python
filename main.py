@@ -73,5 +73,4 @@ app.include_router(user.router, prefix="/user", include_in_schema=True) #  USERS
 app.include_router(misc.router, prefix="/misc", include_in_schema=False) #  MISC ROUTE
 app.include_router(admins.router, prefix="/admin", include_in_schema=False) #  ADMIN ROUTE
 app.include_router(cart.router, prefix="/cart", include_in_schema=True) #  CART ROUTE
-if __name__ == "__main__":
-    app.run()
+

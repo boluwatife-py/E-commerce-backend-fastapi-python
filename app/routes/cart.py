@@ -4,8 +4,9 @@ from app.models import User, Product, Cart, Order, OrderItem
 from core.auth import get_current_user
 from typing import Annotated, List
 from core.database import get_db
-from app.schemas import CartCreate, CartResponse
+from app.schemas import CartCreate, CartResponse, CheckoutRequestItem
 from sqlalchemy.exc import SQLAlchemyError
+from sqlalchemy import select
 
 
 router = APIRouter()
@@ -156,57 +157,51 @@ def delete_cart_item(
 @router.post("/checkout/")
 async def checkout_cart(
     current_user: Annotated[User, Depends(get_current_user)],
-    cart_items: List[dict],  # [{"product_id": 1, "quantity": 2}, ...]
+    cart_items: List[CheckoutRequestItem],
     db: AsyncSession = Depends(get_db),
 ):
-    try:
-        if not cart_items:
-            raise HTTPException(status_code=400, detail="Cart is empty")
+    if not cart_items:
+        raise HTTPException(status_code=400, detail="Cart is empty")
 
-        total_amount = 0
-        order_items = []
+    cart_ids = [item.cart_id for item in cart_items]
 
-        for item in cart_items:
-            product = db.get(Product, item['product_id'])
-            if not product or product.status != 'published':
-                raise HTTPException(status_code=404, detail=f"Product {item['product_id']} not found")
+    # Fetch cart items
+    result = db.execute(
+        select(Cart).where(Cart.cart_id.in_(cart_ids), Cart.user_id == current_user.user_id)
+    )
+    cart_records = result.scalars().all()
 
-            if item['quantity'] <= 0 or item['quantity'] > product.stock_quantity:
-                raise HTTPException(status_code=400, detail=f"Invalid quantity for product {product.name}")
+    if not cart_records:
+        raise HTTPException(status_code=404, detail="No valid cart items found")
 
-            order_items.append(OrderItem(
-                product_id=product.product_id,
-                quantity=item['quantity'],
-                price=product.price
-            ))
-            total_amount += product.price * item['quantity']
+    # Calculate total price
+    total_price = sum(item.product.price * item.quantity for item in cart_records)
 
-        new_order = Order(
-            user_id=current_user.user_id,
-            status='pending',
-            total_amount=total_amount
+    # Create order
+    new_order = Order(
+        user_id=current_user.user_id,
+        total_price=total_price,
+        status="pending",
+    )
+    db.add(new_order)
+    db.flush()  # This generates the order_id
+
+    # Create order items
+    order_items = []
+    for cart in cart_records:
+        order_item = OrderItem(
+            order_id=new_order.order_id,
+            product_id=cart.product_id,
+            quantity=cart.quantity,
+            price_at_purchase=cart.product.price,
         )
+        order_items.append(order_item)
+        db.add(order_item)
 
-        db.add(new_order)
-        db.flush()
+    # Clear cart (optional)
+    for cart in cart_records:
+        db.delete(cart)
 
-        for item in order_items:
-            item.order_id = new_order.order_id
-            db.add(item)
+    db.commit()
 
-        db.commit()
-        db.refresh(new_order)
-
-        # Normally, you'd return Paystack payment URL
-        return {"order_id": new_order.order_id, "amount": float(new_order.total_amount)}
-
-    except HTTPException:
-        raise
-
-    except SQLAlchemyError as e:
-        db.rollback()
-        raise HTTPException(status_code=500, detail=f"Database error: {str(e)}")
-
-    except Exception as e:
-        db.rollback()
-        raise HTTPException(status_code=500, detail=f"Unexpected error: {str(e)}")
+    return {"message": "Order placed successfully", "order_id": new_order.order_id}

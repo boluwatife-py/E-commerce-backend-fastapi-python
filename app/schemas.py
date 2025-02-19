@@ -1,4 +1,4 @@
-from pydantic import BaseModel, EmailStr, condecimal, validator, Field, HttpUrl, field_validator
+from pydantic import BaseModel, EmailStr, condecimal, validator, Field, HttpUrl, field_validator, conlist
 from decimal import Decimal
 from typing import Optional, List, Annotated
 from enum import Enum
@@ -176,7 +176,12 @@ class ReviewCreate(BaseModel):
         if not v in rate_range:
             raise ValueError("Range should be from 1 - 5.")
         return v
-    
+
+
+class CheckoutRequestItem(BaseModel):
+    cart_id: int
+
+
 # Enum for order status
 class OrderStatus(str, Enum):
     pending = "pending"
@@ -219,6 +224,18 @@ class OrderItemResponse(OrderItemBase):
 
     class Config:
         from_attributes = True
+
+class OTPRequest(BaseModel):
+    phone_number: str
+
+    @validator("phone_number")
+    def validate_phone_number(cls, value):
+        # Example: Simple validation for international format +1234567890
+        pattern = re.compile(r"^\+?[1-9]\d{9,14}$")
+        if not pattern.match(value):
+            raise ValueError("Invalid phone number. Must be in international format, e.g., +1234567890")
+        return value
+
 
 # Payment Schema
 class PaymentBase(BaseModel):

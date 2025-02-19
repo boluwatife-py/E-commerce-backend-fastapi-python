@@ -39,7 +39,7 @@ async def request_to_add_phone(
         ).update({"is_active": False})
         
         otp = create_otp()
-        print(otp)
+        
         new_otp = Otp(
             user_id = current_user.user_id,
             otp = otp,
@@ -49,6 +49,7 @@ async def request_to_add_phone(
 
         try:
             sender = send_otp_sms(phone_number=phone_number, otp=otp)
+            print(sender)
         except Exception:
             raise
         

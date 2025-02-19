@@ -22,7 +22,7 @@ class Settings:
 
     SMSCOUNTRY_USERNAME = os.getenv("SMSCOUNTRY_USERNAME")
     SMSCOUNTRY_PASSWORD = os.getenv("SMSCOUNTRY_PASSWORD")
-    SENDER_ID = os.getenv("SENDER_ID")
+    SMSC_SENDER_ID = os.getenv("SENDER_ID")
     SMSC_URL = os.getenv("SMSC_URL")
 
 settings = Settings()

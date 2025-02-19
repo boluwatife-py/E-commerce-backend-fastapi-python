@@ -11,13 +11,6 @@ class UserBase(BaseModel):
     first_name: str = Field(..., example="John")
     last_name: str = Field(..., example="Doe")
     email: EmailStr = Field(..., example="user@example.com")
-    phone: str = Field(..., example="+1234567890")
-    
-    @validator('phone')
-    def validate_phone(cls, v):
-        if v and not re.match(r"^\+?[1-9]\d{1,14}$", v):
-            raise ValueError("Invalid phone number format")
-        return v
 
 class UserCreate(UserBase):
     password: str = Field(..., example="Secure@123")

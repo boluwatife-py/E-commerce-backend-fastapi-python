@@ -46,7 +46,7 @@ def send_verification_email(email: EmailStr, token: str):
     return send_mail(email=email, body=body, subject=subject)
 
 def successful_verified_email(email: EmailStr, name:str):
-    subject = "Verify Your Email"
+    subject = "Email Successfully Verified"
     body = f"{name}, Your account have been verified successfully."
 
     return send_mail(email=email, body=body, subject=subject)

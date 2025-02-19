@@ -1,10 +1,11 @@
 from fastapi import APIRouter, Depends, HTTPException, Form
 from sqlalchemy.ext.asyncio import AsyncSession
-from app.models import User, Product, Cart
+from app.models import User, Product, Cart, Order, OrderItem
 from core.auth import get_current_user
 from typing import Annotated, List
 from core.database import get_db
 from app.schemas import CartCreate, CartResponse
+from sqlalchemy.exc import SQLAlchemyError
 
 
 router = APIRouter()
@@ -150,3 +151,62 @@ def delete_cart_item(
         db.rollback()
         print(e)
         raise HTTPException(status_code=500, detail="An error occurred while deleting item.")
+
+
+@router.post("/checkout/")
+async def checkout_cart(
+    current_user: Annotated[User, Depends(get_current_user)],
+    cart_items: List[dict],  # [{"product_id": 1, "quantity": 2}, ...]
+    db: AsyncSession = Depends(get_db),
+):
+    try:
+        if not cart_items:
+            raise HTTPException(status_code=400, detail="Cart is empty")
+
+        total_amount = 0
+        order_items = []
+
+        for item in cart_items:
+            product = db.get(Product, item['product_id'])
+            if not product or product.status != 'published':
+                raise HTTPException(status_code=404, detail=f"Product {item['product_id']} not found")
+
+            if item['quantity'] <= 0 or item['quantity'] > product.stock_quantity:
+                raise HTTPException(status_code=400, detail=f"Invalid quantity for product {product.name}")
+
+            order_items.append(OrderItem(
+                product_id=product.product_id,
+                quantity=item['quantity'],
+                price=product.price
+            ))
+            total_amount += product.price * item['quantity']
+
+        new_order = Order(
+            user_id=current_user.user_id,
+            status='pending',
+            total_amount=total_amount
+        )
+
+        db.add(new_order)
+        db.flush()
+
+        for item in order_items:
+            item.order_id = new_order.order_id
+            db.add(item)
+
+        db.commit()
+        db.refresh(new_order)
+
+        # Normally, you'd return Paystack payment URL
+        return {"order_id": new_order.order_id, "amount": float(new_order.total_amount)}
+
+    except HTTPException:
+        raise
+
+    except SQLAlchemyError as e:
+        db.rollback()
+        raise HTTPException(status_code=500, detail=f"Database error: {str(e)}")
+
+    except Exception as e:
+        db.rollback()
+        raise HTTPException(status_code=500, detail=f"Unexpected error: {str(e)}")

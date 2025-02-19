@@ -1,5 +1,4 @@
 from fastapi import APIRouter, Depends, HTTPException, Header, BackgroundTasks
-from sqlalchemy.orm import Session
 from core.database import get_db
 from app.crud import get_user_by_email, get_user_by_phone
 from app.models import User, PasswordResetToken, VerificationToken
@@ -8,6 +7,7 @@ from app.schemas import UserCreate, Token, TokenRefreshRequest, UserResponse, Re
 from core.auth import hash_password, verify_password, create_access_token, create_refresh_token, verify_token, create_verification_token, verify_verification_token, create_password_reset_token
 from core.email_utils import send_verification_email, send_reset_password_email, successful_verified_email
 from sqlalchemy.exc import IntegrityError
+from sqlalchemy.ext.asyncio import AsyncSession
 from pydantic import ValidationError
 from jose import JWTError, ExpiredSignatureError
 from typing import Annotated, Optional
@@ -35,22 +35,17 @@ responces = {
 
 
 @router.post("/signup/", response_model=UserResponse, responses=responces)
-async def register_user(user: UserCreate, db: Session = Depends(get_db)):
+async def register_user(user: UserCreate, db: AsyncSession = Depends(get_db)):
     try:
         if get_user_by_email(db, user.email):
             raise HTTPException(status_code=400, detail="Email already registered")
         
-        if get_user_by_phone(db, user.phone):
-            raise HTTPException(status_code=400, detail="Phone already registered")
-
         user.password = hash_password(user.password)
-
         db_user = User(
             email=user.email,
             first_name=user.first_name,
             last_name=user.last_name,
-            password_hash=user.password,
-            phone=user.phone
+            password_hash=user.password
         )
 
         db.add(db_user)
@@ -99,7 +94,7 @@ async def register_user(user: UserCreate, db: Session = Depends(get_db)):
 
 
 @router.post("/request-verification-link/")
-async def request_new_verification_link(data: RequestVerificationLink, db: Session = Depends(get_db)):
+async def request_new_verification_link(data: RequestVerificationLink, db: AsyncSession = Depends(get_db)):
     try:
         user = db.query(User).filter(User.email == data.email).first()
         if not user:
@@ -147,7 +142,7 @@ async def request_new_verification_link(data: RequestVerificationLink, db: Sessi
 
 
 @router.get('/verify-email/')
-async def verify_account(token: str, bg_tasks: BackgroundTasks, db: Session = Depends(get_db), ):
+async def verify_account(token: str, bg_tasks: BackgroundTasks, db: AsyncSession = Depends(get_db), ):
     try:
         email = verify_verification_token(token)
 
@@ -195,21 +190,29 @@ async def verify_account(token: str, bg_tasks: BackgroundTasks, db: Session = De
 @router.post("/login/", response_model=Token)
 async def login(
     form_data: Annotated[OAuth2PasswordRequestForm, Depends()],
-    db: Session = Depends(get_db)):
-    
-    
-    user = db.query(User).filter(User.email == form_data.username).first()
+    db: AsyncSession = Depends(get_db)):
+    try:
+        user = db.query(User).filter(User.email == form_data.username).first()
+        print(form_data.password)
+        if not user or not verify_password(form_data.password, user.password_hash):
+            raise HTTPException(status_code=401, detail="Invalid credentials")
+        
+        if not user.is_active:
+            raise HTTPException(status_code=403, detail="User is not verified yet")
 
-    if not user or not verify_password(form_data.password, user.password_hash):
-        raise HTTPException(status_code=401, detail="Invalid credentials")
+        access_token = create_access_token({"sub": user.email, "role": user.role})
+        refresh_token = create_refresh_token({"sub": user.email})
+
+        return {"access_token": access_token, "refresh_token": refresh_token, "token_type": "bearer"}
     
-    if not user.is_active:
-        raise HTTPException(status_code=403, detail="User is not verified yet")
+    except HTTPException as e:
+        db.rollback()
+        raise e
 
-    access_token = create_access_token({"sub": user.email, "role": user.role})
-    refresh_token = create_refresh_token({"sub": user.email})
-
-    return {"access_token": access_token, "refresh_token": refresh_token, "token_type": "bearer"}
+    except Exception as e:
+        db.rollback()
+        print(f"Unexpected error: {str(e)}")
+        raise HTTPException(status_code=500, detail="Something went wrong. Please try again.")
 
 
 @router.post("/refresh-token/", response_model=Token)
@@ -228,7 +231,7 @@ async def refresh_token(token_data: TokenRefreshRequest):
         raise HTTPException(status_code=401, detail="Invalid refresh token")
 
 
-async def store_reset_token(db: Session, token: str, email: str):
+async def store_reset_token(db: AsyncSession, token: str, email: str):
     """
     Deactivates any existing reset token and stores a new one.
     """
@@ -243,7 +246,7 @@ async def store_reset_token(db: Session, token: str, email: str):
 @router.post("/forgot-password/")
 async def forgot_password(
     data: PasswordResetRequest,
-    db: Session = Depends(get_db),
+    db: AsyncSession = Depends(get_db),
     authorization: Optional[str] = Header(None)
 ):
     """
@@ -290,7 +293,7 @@ async def forgot_password(
 
 
 @router.post("/reset-password/")
-async def reset_password(data: ResetPasswordRequest, db: Session = Depends(get_db)):
+async def reset_password(data: ResetPasswordRequest, db: AsyncSession = Depends(get_db)):
     try:
         try:
             payload = verify_token(data.token)

@@ -14,17 +14,13 @@ class User(Base):
     last_name = Column(String(50), nullable=False)
     email = Column(String(100), unique=True, nullable=False)
     password_hash = Column(String(255), nullable=False)
-    phone = Column(String(20), unique=True, nullable=True)
-    address = Column(Text)
-    city = Column(String(50))
-    state = Column(String(50))
-    zip_code = Column(String(10))
-    country = Column(String(50))
     is_active = Column(Boolean, default=False, nullable=False)
-
     role = Column(String(20), nullable=False, default="buyer")
     created_at = Column(TIMESTAMP, server_default=func.now())
 
+    profile = relationship("UserProfile", back_populates="user", uselist=False, cascade="all, delete-orphan")
+
+    # Relationships with other tables
     product = relationship("Product", back_populates="seller", cascade="all, delete", lazy="dynamic")
     orders = relationship("Order", back_populates="user", cascade="all, delete-orphan")
     payments = relationship("Payment", back_populates="user", cascade="all, delete-orphan")
@@ -33,7 +29,6 @@ class User(Base):
     cart = relationship("Cart", back_populates="user", cascade="all, delete-orphan")
     verification_tokens = relationship("VerificationToken", back_populates="user")
 
-    
     reports_received = relationship(
         "ProductReport",
         foreign_keys='[ProductReport.seller_id]',
@@ -45,13 +40,33 @@ class User(Base):
         foreign_keys='[ProductReport.user_id]',
         back_populates="reported_by"
     )
-    
+
     __table_args__ = (
         CheckConstraint("role IN ('admin', 'buyer', 'merchant')", name="check_user_role"),
     )
 
     def __repr__(self):
         return f"<User {self.email} ({self.role})>"
+
+
+class UserProfile(Base):
+    __tablename__ = "user_profiles"
+
+    profile_id = Column(Integer, primary_key=True, autoincrement=True)
+    user_id = Column(Integer, ForeignKey("users.user_id", ondelete="CASCADE"), unique=True, nullable=False)
+
+    phone = Column(String(20), unique=True, nullable=True)
+    address = Column(Text)
+    city = Column(String(50))
+    state = Column(String(50))
+    zip_code = Column(String(10))
+    country = Column(String(50))
+
+    user = relationship("User", back_populates="profile")
+
+    def __repr__(self):
+        return f"<UserProfile {self.first_name} {self.last_name}>"
+
 
     
 class Product(Base):

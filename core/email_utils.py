@@ -62,5 +62,3 @@ def successful_upgrade_email_m(to_email: EmailStr, name: str):
     body = f"congratulations {name} You have become a merchant"
 
     return send_mail(email=to_email, body=body, subject=subject)
-
-def product

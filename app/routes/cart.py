@@ -6,6 +6,7 @@ from typing import Annotated, List
 from core.database import get_db
 from app.schemas import CartCreate, CartResponse
 
+
 router = APIRouter()
 
 

@@ -13,7 +13,7 @@ from jose import JWTError, ExpiredSignatureError
 from typing import Annotated, Optional
 
 
-router = APIRouter()
+router = APIRouter(tags=['Auth'])
 
 
 responces = {

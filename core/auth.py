@@ -4,11 +4,11 @@ from fastapi import HTTPException, Depends, status
 from fastapi.security import OAuth2PasswordBearer
 from core.config import settings
 from jose import jwt, JWTError
-from app.models import User
+from app.models import User, UserData
 from typing import Optional, Annotated
-from sqlalchemy.orm import Session
+from sqlalchemy.ext.asyncio import AsyncSession
 from .database import get_db
-import secrets, time
+import secrets, time, hashlib, random
 
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/auth/login/")
@@ -57,11 +57,11 @@ def create_password_reset_token(email: str) -> str:
 
 def get_current_user(
     token: Annotated[str, Depends(oauth2_scheme)], 
-    db: Session = Depends(get_db)
+    db: AsyncSession = Depends(get_db)
 ) -> User:
     credentials_exception = HTTPException(
         status_code=status.HTTP_401_UNAUTHORIZED,
-        detail="Could not validate credentials",
+        detail="Could not validate credentials - Login Session Expired",
         headers={"WWW-Authenticate": "Bearer"},
     )
 
@@ -98,14 +98,39 @@ def require_user_profile():
     """Dependency to check if the user has a profile."""
     def data_checker(user: User = Depends(get_current_user)):
         if not user.data:
-            raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail=f"Access denied, user info is required")
+            raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail=f"Access denied, Add phone number to continue")
         return user
     
     return data_checker
 
+def require_complete_data():
+    """Dependency to check if the user profile is completed."""
+    credentials_exception = HTTPException(
+        status_code=status.HTTP_401_UNAUTHORIZED,
+        detail="Complete your profile-address data",
+        headers={"WWW-Authenticate": "Bearer"},
+    )
+    def c_data_checker(user: User = Depends(require_user_profile())) -> User:
+        user_data: UserData = user.data
+
+        if not user_data:
+            raise credentials_exception
+
+        if not user_data.address or not user_data.city or not user_data.state or not user_data.country or not user_data.zip_code:
+            raise credentials_exception
+        return user
+    return c_data_checker
+
 def create_otp():
     otp = secrets.randbelow(1000000)
     otp = str(otp).zfill(6)
+
+    counter = str(int(time.time()))
+    hash_value = hashlib.sha256((otp + counter).encode()).hexdigest()
+    otp = ''.join(filter(str.isdigit, hash_value))[:6]
+
+    while len(otp) < 6:
+        otp += str(random.randint(0, 9))
 
     return otp
 
@@ -123,4 +148,5 @@ def verify_otp(db_timestamp: time, r_otp: str, i_otp: str) -> bool:
         
         return True, 'Successfully Verified OTP'
     except Exception as e:
+        print(e)
         return False, e

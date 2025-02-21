@@ -10,7 +10,7 @@ from sqlalchemy import select, func
 from sqlalchemy.orm import selectinload
 
 
-router = APIRouter()
+router = APIRouter(tags=['Product'])
 
 
 from sqlalchemy import select

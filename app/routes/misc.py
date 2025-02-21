@@ -8,7 +8,7 @@ from app.schemas import CategoryResponse, CurrencyResponse
 from app.services.ip import get_country_dial_code
 from geoip2.errors import AddressNotFoundError
 
-router = APIRouter()
+router = APIRouter(tags=['Miscellaneous'])
 
 @router.get("/categories/", response_model=List[CategoryResponse])
 async def get_categories(db: AsyncSession = Depends(get_db)):

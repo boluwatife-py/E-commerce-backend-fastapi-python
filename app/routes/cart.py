@@ -1,7 +1,7 @@
 from fastapi import APIRouter, Depends, HTTPException, Form
 from sqlalchemy.ext.asyncio import AsyncSession
 from app.models import User, Product, Cart, Order, OrderItem
-from core.auth import get_current_user
+from core.auth import get_current_user, require_complete_data
 from typing import Annotated, List
 from core.database import get_db
 from app.schemas import CartCreate, CartResponse, CheckoutRequestItem
@@ -9,7 +9,7 @@ from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy import select
 
 
-router = APIRouter()
+router = APIRouter(tags=["Cart"])
 
 
 @router.get('/items/', response_model=List[CartResponse])
@@ -156,7 +156,7 @@ def delete_cart_item(
 
 @router.post("/checkout/")
 async def checkout_cart(
-    current_user: Annotated[User, Depends(get_current_user)],
+    current_user: Annotated[User, Depends(require_complete_data())],
     cart_items: List[CheckoutRequestItem],
     db: AsyncSession = Depends(get_db),
 ):
@@ -165,7 +165,7 @@ async def checkout_cart(
 
     cart_ids = [item.cart_id for item in cart_items]
 
-    # Fetch cart items
+
     result = db.execute(
         select(Cart).where(Cart.cart_id.in_(cart_ids), Cart.user_id == current_user.user_id)
     )

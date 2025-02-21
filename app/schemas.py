@@ -28,18 +28,18 @@ class UserResponse(BaseModel):
 class RequestVerificationLink(BaseModel):
     email: EmailStr = Field(..., example="user@example.com")
 
-
 class OTPRequest(BaseModel):
     phone_number: str = Field(..., example='+91234567890')
 
     @validator("phone_number")
     def validate_phone_number(cls, value):
-        
         pattern = re.compile(r"^\+?[1-9]\d?\s?\d{9,14}$")
         if not pattern.match(value):
             raise ValueError("Invalid phone number. Must be in international format, e.g., +1234567890")
         return value
 
+class OTPRequestResponse(BaseModel):
+    detail: str = Field(..., example="OTP sent to phone number")
 
 class OTPVerify(OTPRequest):
     otp: str = Field(..., example='123456')
@@ -52,8 +52,21 @@ class OTPVerify(OTPRequest):
             raise ValueError("Invalid OTP. must be 6 characters")
         return value
 
+class PhoneNumberUpdateResponse(BaseModel):
+    detail: str = Field(..., example="Phone number updated successfully")
 
+class ProfileUpdate(BaseModel):
+    country: str = Field(..., example="USA")
+    state: str = Field(..., example="California")
+    city: str = Field(..., example="Francisco")
+    address: str = Field(..., example="1234 Lombert Street")
+    zip_code: int = Field(..., example="94109")
 
+class ProfileUpdateResponse(BaseModel):
+    detail: str = Field(..., example="Profile data updated successfully")
+
+class RoleUpdateResponse(BaseModel):
+    detail: str = Field(..., example="User role updated successfully")
 
 
 
@@ -159,7 +172,7 @@ class ProductResponse(BaseModel):
 
 class ImageRankUpdate(BaseModel):
     id: int
-    rank: float  # 👈 Change from position to rank
+    rank: float
 
 class ImageRankUpdatePayload(BaseModel):
     updates: List[ImageRankUpdate]
@@ -252,18 +265,6 @@ class OrderItemResponse(OrderItemBase):
 
     class Config:
         from_attributes = True
-
-class OTPRequest(BaseModel):
-    phone_number: str
-
-    @validator("phone_number")
-    def validate_phone_number(cls, value):
-        # Example: Simple validation for international format +1234567890
-        pattern = re.compile(r"^\+?[1-9]\d{9,14}$")
-        if not pattern.match(value):
-            raise ValueError("Invalid phone number. Must be in international format, e.g., +1234567890")
-        return value
-
 
 # Payment Schema
 class PaymentBase(BaseModel):

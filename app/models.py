@@ -1,4 +1,4 @@
-from sqlalchemy import Column, Integer, String, Text, TIMESTAMP, ForeignKey, DECIMAL, Date, CheckConstraint, Boolean, UniqueConstraint, Float
+from sqlalchemy import Column, Integer, String, Text, TIMESTAMP, ForeignKey, DECIMAL, Date, CheckConstraint, Boolean, Float
 from sqlalchemy.orm import relationship
 from sqlalchemy.sql import func
 from core.database import Base
@@ -56,17 +56,17 @@ class UserData(Base):
     profile_id = Column(Integer, primary_key=True, autoincrement=True)
     user_id = Column(Integer, ForeignKey("users.user_id", ondelete="CASCADE"), unique=True, nullable=False)
 
-    phone = Column(String(20), unique=True, nullable=True)
-    address = Column(Text)
-    city = Column(String(50))
-    state = Column(String(50))
-    zip_code = Column(String(10))
-    country = Column(String(50))
+    phone = Column(String(20), unique=True, nullable=False)
+    address = Column(Text, nullable=True)
+    city = Column(String(50), nullable=True)
+    state = Column(String(50), nullable=True)
+    zip_code = Column(String(10), nullable=True)
+    country = Column(String(50), nullable=True)
 
     user = relationship("User", back_populates="data")
 
     def __repr__(self):
-        return f"<UserData {self.first_name} {self.last_name}>"
+        return f"<UserData{self.user_id}>"
 
     
 class Product(Base):

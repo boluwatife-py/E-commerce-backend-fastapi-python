@@ -7,7 +7,7 @@ from core.database import get_db
 from core.auth import get_current_user
 
 
-router = APIRouter()
+router = APIRouter(tags=['Payments'])
 
 PAYSTACK_SECRET_KEY = "sk_test_xxxx"
 

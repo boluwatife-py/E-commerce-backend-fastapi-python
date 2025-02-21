@@ -6,7 +6,7 @@ from fastapi import Depends, APIRouter
 # from .products import normalize_image_positions
 # from typing import Annotated
 
-router = APIRouter()
+router = APIRouter(tags=['Admin'])
 
 
 # @router.post("/products/{product_id}/images/normalize")

@@ -44,7 +44,7 @@ async def request_to_add_phone(
             phone=phone_number,
         )
 
-        sender = await send_otp_sms(phone_number=phone_number, otp=otp)
+        sender = send_otp_sms(phone_number=phone_number, otp=otp)
         print(sender)
 
         db.add(new_otp)

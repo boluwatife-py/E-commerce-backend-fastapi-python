@@ -1,7 +1,7 @@
 import httpx
 from .config import settings
 
-async def send_otp_sms(phone_number: str, otp: int) -> str:
+def send_otp_sms(phone_number: str, otp: int) -> str:
     """
     Sends an OTP SMS using SMSCountry API.
 
@@ -21,8 +21,8 @@ async def send_otp_sms(phone_number: str, otp: int) -> str:
             "DR": "1",
         }
 
-        async with httpx.AsyncClient() as client:
-            response = await client.get(settings.SMSC_URL, params=params)
+        with httpx.Client() as client:
+            response = client.get(settings.SMSC_URL, params=params)
 
         if response.status_code != 200 or "failed" in response.text.lower():
             raise RuntimeError(f"Failed to send OTP. Response: {response.text}")

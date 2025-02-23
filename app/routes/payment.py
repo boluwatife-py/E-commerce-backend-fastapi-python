@@ -6,7 +6,8 @@ from app.models import User, Order
 from core.database import get_db
 from core.auth import get_current_user
 from core.config import settings
-
+from sqlalchemy import select
+from sqlalchemy.orm import selectinload
 
 router = APIRouter(tags=['Payments'])
 
@@ -16,11 +17,20 @@ async def initiate_payment(
     current_user: Annotated[User, Depends(get_current_user)],
     db: AsyncSession = Depends(get_db),
 ):
-    order = db.get(Order, order_id)
+    
+    query = (
+        select(Order)
+        .options(
+            selectinload(Order.order_items)
+        )
+        .filter(Order.order_status == 'pending', Order.stock_quantity > 0)
+    )
+    order: Order = db.execute(query)
+    print(order.order_items)
     if not order or order.user_id != current_user.user_id:
-        raise HTTPException(status_code=404, detail="Order not found")
+        raise HTTPException(status_code=404, detail="Order not found.")
 
-    if order.status != 'pending':
+    if order.order_status != 'pending':
         raise HTTPException(status_code=400, detail="Order is not in pending status")
 
     async with httpx.AsyncClient() as client:

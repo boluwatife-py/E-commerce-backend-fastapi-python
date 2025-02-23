@@ -62,7 +62,7 @@ def root():
 
 
 
-from app.routes import (auth, misc, products, user, admins, cart, payment)
+from app.routes import (auth, misc, products, user, admins, cart, payment, orders)
 
 from fastapi.exceptions import RequestValidationError
 
@@ -72,6 +72,7 @@ app.include_router(user.router, prefix="/user", include_in_schema=True) #  USERS
 app.include_router(admins.router, prefix="/admin", include_in_schema=False) #  ADMIN ROUTE
 app.include_router(products.router, prefix="/products", include_in_schema=True) #  PRODUCTS ROUTE
 app.include_router(cart.router, prefix="/cart", include_in_schema=True) #  CART ROUTE
+app.include_router(orders.router, prefix="/orders", include_in_schema=True) #  CART ROUTE
 app.include_router(payment.router, prefix="/payment", include_in_schema=True) #  CART ROUTE
 app.include_router(misc.router, prefix="/misc", include_in_schema=True) #  MISC ROUTE
 

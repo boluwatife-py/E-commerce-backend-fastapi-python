@@ -147,7 +147,7 @@ class Order(Base):
 
 
     def __repr__(self):
-        return f"<Order {self.order_id} - {self.order_status} (${self.total_amount})>"
+        return f"<Order {self.order_id} - {self.order_status} ({self.total_amount})>"
 
 
 class OrderItem(Base):

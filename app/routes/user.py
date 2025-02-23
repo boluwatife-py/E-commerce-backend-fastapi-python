@@ -4,7 +4,7 @@ from app.models import User, Otp, UserData
 from core.auth import require_role, get_current_user, create_otp, require_user_profile, require_complete_data
 from typing import Annotated
 from core.email_utils import successful_upgrade_email_m
-from app.schemas import OTPRequest, OTPVerify, ProfileUpdate, PhoneNumberUpdateResponse, OTPRequestResponse, ProfileUpdateResponse, RoleUpdateResponse
+from app.schemas import OTPRequest, OTPVerify, ProfileUpdate, PhoneNumberUpdateResponse, OTPRequestResponse, ProfileUpdateResponse, RoleUpdateResponse, UserDataResponse
 from app.crud import get_user_by_phone
 from sqlalchemy.ext.asyncio import AsyncSession
 from core.message_utils import send_otp_sms
@@ -47,6 +47,7 @@ async def request_to_add_phone(
             created_at = datetime.now(),
         )
 
+        # print(otp)
         try:
             send_otp_sms(phone_number=phone_number, otp=otp)
         except Exception:
@@ -64,7 +65,7 @@ async def request_to_add_phone(
     except Exception as e:
         print(e)
         db.rollback()
-        raise HTTPException(status_code=500, detail="An unexpected error occurred, %s"%e)
+        raise HTTPException(status_code=500, detail="An unexpected error occurred")
 
 
 @router.post('/verify/phone/')
@@ -156,6 +157,29 @@ def update_profile(
         print(e)
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Unexpected error occured (%s)"%e)
 
+@router.get('/user/profile/data/')
+def get_user_profile(
+    user: Annotated[User, Depends(get_current_user)],
+    db: AsyncSession = Depends(get_db),
+) -> UserDataResponse:
+    try:
+        return UserDataResponse(
+            first_name = user.first_name,
+            last_name = user.last_name,
+            email = user.email,
+            phone = user.data.phone,
+            country = user.data.country,
+            state = user.data.state,
+            city = user.dtaa.city,
+            address = user.data.address,
+            zip_code = user.data.zip_code,
+        )
+    except HTTPException:
+        raise 
+
+    except Exception as e:
+        print(e)
+        raise HTTPException(status_code=500, detail="An unexpected error occurred")
 
 @router.get("/upgrade-to-merchant/", response_model=RoleUpdateResponse)
 def upgrade_to_merchant(
@@ -165,13 +189,13 @@ def upgrade_to_merchant(
 ):
 
     try:
-        if not current_user.user.role == 'buyer':
+        if not current_user.role == 'buyer':
             raise HTTPException(status_code=403, detail='You are already a merchnat')
         
-        current_user.user.role = "merchant"
+        current_user.role = "merchant"
         db.commit()
         db.refresh(current_user)
-        bg_tasks.add_task(successful_upgrade_email_m, current_user.user.email, current_user.user.first_name)
+        bg_tasks.add_task(successful_upgrade_email_m, current_user.email, current_user.first_name)
 
         return {"detail": "You have been upgraded to a merchant"}
     

@@ -25,6 +25,17 @@ class UserCreate(UserBase):
 class UserResponse(BaseModel):
     email: EmailStr = Field(..., example="user@example.com")
 
+class UserDataResponse(BaseModel):
+    first_name: str = Field(..., example="John")
+    last_name: str = Field(..., example="Doe")
+    email: EmailStr = Field(..., example="John@example.com")
+    phone: str | None
+    country: str | None
+    state: str | None
+    city: str | None
+    address: str | None
+    zip_code: int | None
+
 class RequestVerificationLink(BaseModel):
     email: EmailStr = Field(..., example="user@example.com")
 
@@ -222,40 +233,33 @@ class OrderStatus(str, Enum):
     shipped = "shipped"
     delivered = "delivered"
     cancelled = "cancelled"
-
 # Enum for payment status
 class PaymentStatus(str, Enum):
     pending = "pending"
     completed = "completed"
     failed = "failed"
 
+
+class OrderItemResponse(BaseModel):
+    order_item_id: int
+    product_id: int
+    quantity: int
+    unit_price: Decimal
+    total_price: Decimal
+
+
 class OrderBase(BaseModel):
-    user_id: int
     total_amount: Decimal
     order_status: OrderStatus = OrderStatus.pending
     payment_status: PaymentStatus = PaymentStatus.pending
+    created_at: datetime
+    coupon_id: int | None
+    order_items: list[OrderItemResponse]
+
 
 class OrderCreate(OrderBase):
     pass
 
-class OrderResponse(OrderBase):
-    order_id: int
-
-    class Config:
-        from_attributes = True
-
-# Order Item Schema
-class OrderItemBase(BaseModel):
-    order_id: int
-    product_id: int
-    quantity: int
-    unit_price: Decimal
-
-class OrderItemResponse(OrderItemBase):
-    order_item_id: int
-
-    class Config:
-        from_attributes = True
 
 # Payment Schema
 class PaymentBase(BaseModel):

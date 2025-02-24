@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, HTTPException, BackgroundTasks, status
+from fastapi import APIRouter, Depends, HTTPException, BackgroundTasks, status, Form
 from core.database import get_db
 from app.models import User, Order
 from core.auth import require_role, get_current_user, create_otp, require_complete_data
@@ -15,6 +15,20 @@ from datetime import timedelta, datetime
 
 router = APIRouter(tags=["Orders"])
 
+
+@router.post('/review/order',)
+def check_order_status(
+    user: Annotated[User, Depends(require_complete_data())],
+    order: Form,
+    db: AsyncSession = Depends(get_db),
+):
+    try:
+        print()
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail='An unexpected error occurred.')
+
 @router.get('/', response_model=list[OrderBase])
 def get_user_orders(
     user: Annotated[User, Depends(require_complete_data())],
@@ -25,7 +39,7 @@ def get_user_orders(
         
         if not orders:
             raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail='No orders found for this user.')
-        
+
         order_response = []
         for order in orders:
             order_response.append(OrderBase(

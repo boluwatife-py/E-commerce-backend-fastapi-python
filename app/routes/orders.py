@@ -23,6 +23,9 @@ def get_user_orders(
     try:
         orders: Order = db.query(Order).filter(Order.user_id == user.user_id).all()
         
+        if not orders:
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail='No orders found for this user.')
+        
         order_response = []
         for order in orders:
             order_response.append(OrderBase(
@@ -41,5 +44,8 @@ def get_user_orders(
             ))
 
         return order_response
-    except:
+    except HTTPException:
         raise
+
+    except Exception as e:
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail='An unexpected error occurred.')

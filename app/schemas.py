@@ -251,7 +251,7 @@ class OrderItemResponse(BaseModel):
 class OrderBase(BaseModel):
     total_amount: Decimal
     order_status: OrderStatus = OrderStatus.pending
-    payment_status: PaymentStatus = PaymentStatus.pending
+    order_payment_status: PaymentStatus = PaymentStatus.pending
     created_at: datetime
     coupon_id: int | None
     order_items: list[OrderItemResponse]

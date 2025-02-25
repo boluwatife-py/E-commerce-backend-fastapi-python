@@ -155,7 +155,7 @@ class OrderItem(Base):
 
     order_item_id = Column(Integer, primary_key=True, autoincrement=True)
     order_id = Column(Integer, ForeignKey("orders.order_id", ondelete="CASCADE"), nullable=False)
-    product_id = Column(Integer, ForeignKey("products.product_id", ondelete="CASCADE"), nullable=False)
+    product_id = Column(Integer, ForeignKey("products.product_id", ondelete="SET NULL"), nullable=True)  # 🔹 Changed to SET NULL
     quantity = Column(Integer, nullable=False)
     unit_price = Column(DECIMAL(10, 2), nullable=False)
     total_price = Column(DECIMAL(10, 2), nullable=False)
@@ -164,7 +164,8 @@ class OrderItem(Base):
     product = relationship("Product", back_populates="order_items")
 
     def __repr__(self):
-        return f"<OrderItem {self.quantity} x Product {self.product_id} (Order {self.order_id})>"
+        return f"<OrderItem {self.quantity} x Product {self.product_id or 'DELETED'} (Order {self.order_id})>"
+
     
 
 class Payment(Base):

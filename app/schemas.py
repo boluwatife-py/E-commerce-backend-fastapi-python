@@ -239,14 +239,13 @@ class PaymentStatus(str, Enum):
     completed = "completed"
     failed = "failed"
 
-
 class OrderItemResponse(BaseModel):
-    order_item_id: int
-    product_id: int
-    quantity: int
-    unit_price: Decimal
-    total_price: Decimal
-
+    order_item_id: int | None
+    product_id: int | None
+    quantity: int | None
+    unit_price: Decimal | None
+    total_price: Decimal | None
+    product_name: str | None
 
 class OrderBase(BaseModel):
     total_amount: Decimal
@@ -256,7 +255,8 @@ class OrderBase(BaseModel):
     coupon_id: int | None
     order_items: list[OrderItemResponse]
 
-
+class OrderRequest(BaseModel):
+    order_id: int
 class OrderCreate(OrderBase):
     pass
 

@@ -211,3 +211,77 @@ def edit_order_item(
         raise
     except Exception as e:
         raise HTTPException(status_code=500, detail="An unexpected error occurred.")
+
+
+@router.delete("/order/{order_id}/item/{order_item_id}")
+def delete_order_item(
+    user: Annotated[User, Depends(require_complete_data())],
+    order_id: int,
+    order_item_id: int,
+    db: AsyncSession = Depends(get_db),
+):
+    try:
+        order = db.query(Order).filter(Order.order_id == order_id).first()
+        if not order:
+            raise HTTPException(status_code=404, detail="Order not found.")
+
+        if order.user_id != user.user_id:
+            raise HTTPException(status_code=403, detail="Unauthorized to modify this order.")
+
+        if order.order_payment_status == "completed":
+            raise HTTPException(status_code=400, detail="Order cannot be modified after payment is completed.")
+
+        order_item = db.query(OrderItem).filter(OrderItem.order_item_id == order_item_id, OrderItem.order_id == order_id).first()
+        if not order_item:
+            raise HTTPException(status_code=404, detail="Order item not found.")
+
+        # Restore stock quantity
+        product = db.query(Product).filter(Product.product_id == order_item.product_id).first()
+        if product:
+            product.stock_quantity += order_item.quantity
+
+        db.delete(order_item)
+
+        # Recalculate total order amount
+        order.total_amount = sum(item.total_price for item in order.order_items if item.order_item_id != order_item_id)
+
+        db.commit()
+        return {"message": "Order item deleted successfully.", "order_id": order_id, "order_item_id": order_item_id}
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail="An unexpected error occurred.")
+
+
+@router.delete("/order/{order_id}")
+def delete_order(
+    user: Annotated[User, Depends(require_complete_data())],
+    order_id: int,
+    db: AsyncSession = Depends(get_db),
+):
+    try:
+        order = db.query(Order).filter(Order.order_id == order_id).first()
+        if not order:
+            raise HTTPException(status_code=404, detail="Order not found.")
+
+        if order.user_id != user.user_id:
+            raise HTTPException(status_code=403, detail="Unauthorized to delete this order.")
+
+        if order.order_payment_status == "completed":
+            raise HTTPException(status_code=400, detail="Paid orders cannot be deleted.")
+
+        # Restore stock for all order items
+        for order_item in order.order_items:
+            product = db.query(Product).filter(Product.product_id == order_item.product_id).first()
+            if product:
+                product.stock_quantity += order_item.quantity
+
+        db.delete(order)
+        db.commit()
+        return {"message": "Order deleted successfully.", "order_id": order_id}
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail="An unexpected error occurred.")

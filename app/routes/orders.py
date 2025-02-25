@@ -1,6 +1,6 @@
-from fastapi import APIRouter, Depends, HTTPException, BackgroundTasks, status, Form
+from fastapi import APIRouter, Depends, HTTPException, BackgroundTasks, status, Body
 from core.database import get_db
-from app.models import User, Order
+from app.models import User, Order, OrderItem, Product
 from core.auth import require_role, get_current_user, create_otp, require_complete_data
 from typing import Annotated
 from app.schemas import OrderItemResponse, OrderBase, OrderRequest
@@ -109,3 +109,105 @@ def get_user_orders(
 
     except Exception as e:
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail='An unexpected error occurred.')
+
+
+@router.get('/order/{order_id}/items', response_model=list[OrderItemResponse])
+def get_order_items(
+    user: Annotated[User, Depends(require_complete_data())],
+    order_id: int,
+    db: AsyncSession = Depends(get_db),
+):
+    try:
+        order: Order = db.query(Order).filter(Order.order_id == order_id).first()
+
+        if not order:
+            raise HTTPException(status_code=404, detail="Order not found.")
+
+        if order.user_id != user.user_id:
+            raise HTTPException(status_code=403, detail="Unauthorized to access this order.")
+
+        order_items: OrderItem = db.query(OrderItem).filter(OrderItem.order_id == order_id).all()
+
+        if not order_items:
+            raise HTTPException(status_code=404, detail="No order items found.")
+
+        response = []
+        for item in order_items:
+            product = db.query(Product).filter(Product.product_id == item.product_id).first()
+            
+            response.append(OrderItemResponse(
+                order_item_id=item.order_item_id,
+                product_id=item.product_id if product else None,
+                quantity=item.quantity,
+                unit_price=item.unit_price,
+                total_price=item.total_price,
+                product_details={
+                    "name": product.name if product else None,
+                    "price": product.price if product else None,
+                    "status": product.status if product else "Deleted"
+                }
+            ))
+
+        return response
+
+    except HTTPException:
+        raise
+
+    except Exception as e:
+        raise HTTPException(status_code=500, detail="An unexpected error occurred.")
+
+
+@router.put('/order/{order_id}/item/{order_item_id}')
+def edit_order_item(
+    user: Annotated[User, Depends(require_complete_data())],
+    order_id: int,
+    order_item_id: int,
+    new_quantity: int = Body(..., gt=0),
+    db: AsyncSession = Depends(get_db),
+):
+    try:
+        
+        order: Order = db.query(Order).filter(Order.order_id == order_id).first()
+
+        if not order:
+            raise HTTPException(status_code=404, detail="Order not found.")
+
+
+        if order.user_id != user.user_id:
+            raise HTTPException(status_code=403, detail="Unauthorized to modify this order.")
+
+
+        if order.order_payment_status == "completed":
+            raise HTTPException(status_code=400, detail="Order cannot be modified after payment is completed.")
+
+
+        order_item: OrderItem = db.query(OrderItem).filter(OrderItem.order_item_id == order_item_id, OrderItem.order_id == order_id).first()
+
+        if not order_item:
+            raise HTTPException(status_code=404, detail="Order item not found.")
+
+
+        product: Product = db.query(Product).filter(Product.product_id == order_item.product_id).first()
+        if not product:
+            raise HTTPException(status_code=400, detail="Product have been removed and cannot be updated.")
+
+
+        if new_quantity > product.stock_quantity:
+            raise HTTPException(status_code=400, detail=f"Not enough stock available. Only {product.stock_quantity} left.")
+
+
+        order_item.quantity = new_quantity
+        order_item.total_price = new_quantity * order_item.unit_price
+
+
+        total_amount = sum(item.total_price for item in order.order_items)
+        order.total_amount = total_amount
+
+        db.commit()
+
+        return {"message": "Order item updated successfully.", "order_id": order_id, "order_item_id": order_item_id}
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail="An unexpected error occurred.")

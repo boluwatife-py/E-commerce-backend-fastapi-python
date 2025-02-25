@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, HTTPException, Form
+from fastapi import APIRouter, Depends, HTTPException, Form, status
 from sqlalchemy.ext.asyncio import AsyncSession
 from app.models import User, Product, Cart, Order, OrderItem
 from core.auth import get_current_user, require_complete_data
@@ -154,6 +154,53 @@ def delete_cart_item(
         raise HTTPException(status_code=500, detail="An error occurred while deleting item.")
 
 
+@router.post('/cart/validate')
+def check_cart_status(
+    user: Annotated[User, Depends(require_complete_data())],
+    db: AsyncSession = Depends(get_db),
+):
+    try:
+        cart_items = db.query(Cart).filter(Cart.user_id == user.user_id).all()
+
+        if not cart_items:
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Cart is empty.")
+
+        issues = []
+
+        for cart_item in cart_items:
+            product: Product = cart_item.product
+
+            if not product:
+                issues.append({
+                    "cart_item_id": cart_item.cart_item_id,
+                    "issue": "Product has been deleted."
+                })
+                continue
+
+            if product.stock_quantity < cart_item.quantity:
+                issues.append({
+                    "cart_item_id": cart_item.cart_item_id,
+                    "issue": "Not enough stock available."
+                })
+
+
+        if issues:
+            return {
+                "status": "Review Needed",
+                "issues": issues
+            }
+
+        return {
+            "status": "Valid",
+            "message": "All cart items are valid."
+        }
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="An unexpected error occurred.")
+
+
 @router.post("/checkout/")
 async def checkout_cart(
     current_user: Annotated[User, Depends(require_complete_data())],
@@ -161,11 +208,9 @@ async def checkout_cart(
 ):
     try:
         cart_items = current_user.cart
-        if not cart_items:
-            raise HTTPException(status_code=400, detail="Cart is empty")
+        if not cart_items:            raise HTTPException(status_code=400, detail="Cart is empty.")
 
         cart_ids = [item.cart_id for item in cart_items]
-
 
         result = db.execute(
             select(Cart).where(Cart.cart_id.in_(cart_ids), Cart.user_id == current_user.user_id)
@@ -173,11 +218,38 @@ async def checkout_cart(
         cart_records = result.scalars().all()
 
         if not cart_records:
-            raise HTTPException(status_code=404, detail="No valid cart items found")
+            raise HTTPException(status_code=404, detail="No valid cart items found.")
 
+        issues = []
+        valid_cart_items = []
 
-        total_price = sum(item.product.price * item.quantity for item in cart_records)
+        for cart in cart_records:
+            product = cart.product  # Relationship from Cart to Product
 
+            if not product:
+                issues.append({
+                    "cart_item_id": cart.cart_id,
+                    "issue": "Product have been removed."
+                })
+                continue
+
+            if product.stock_quantity < cart.quantity:
+                issues.append({
+                    "cart_item_id": cart.cart_id,
+                    "issue": "Not enough stock available."
+                })
+                continue
+
+            valid_cart_items.append(cart)
+
+        if issues:
+            return {
+                "status": "Review Needed",
+                "message": "Some items need to be updated before checkout.",
+                "issues": issues
+            }
+
+        total_price = sum(cart.product.price * cart.quantity for cart in valid_cart_items)
 
         new_order = Order(
             user_id=current_user.user_id,
@@ -188,26 +260,30 @@ async def checkout_cart(
         db.flush()
 
         order_items = []
-        for cart in cart_records:
+        for cart in valid_cart_items:
             order_item = OrderItem(
                 order_id=new_order.order_id,
                 product_id=cart.product_id,
                 quantity=cart.quantity,
                 unit_price=cart.product.price,
-                total_price = cart.product.price * cart.quantity,
+                total_price=cart.product.price * cart.quantity,
             )
             order_items.append(order_item)
             db.add(order_item)
 
-        for cart in cart_records:
+        for cart in valid_cart_items:
             db.delete(cart)
 
         db.commit()
 
-        return {"message": "Order placed successfully. Continue to payment to start shipping.", "order_id": new_order.order_id, "next": "Payment route at '/payment/paystack/initiate-payment/'"}
+        return {
+            "message": "Order placed successfully. Continue to payment to start shipping.",
+            "order_id": new_order.order_id,
+            "next": "Payment route at '/payment/paystack/initiate-payment/'"
+        }
 
     except HTTPException as http_exc:
         raise http_exc
 
     except Exception as e:
-        raise HTTPException(status_code=500, detail="Unexpected error occurred while processing order")
+        raise HTTPException(status_code=500, detail="Unexpected error occurred while processing order.")

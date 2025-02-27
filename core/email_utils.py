@@ -62,3 +62,8 @@ def successful_upgrade_email_m(to_email: EmailStr, name: str):
     body = f"congratulations {name} You have become a merchant"
 
     return send_mail(email=to_email, body=body, subject=subject)
+
+
+def product_ordered_mail(to_email: EmailStr, product_data: dict, is_first_product_order: bool):
+    subject = "A product was ordered"
+    body = f"A product is beign ordered. do well to make all ordered product available before the next 5 days or the order will be withdrew."

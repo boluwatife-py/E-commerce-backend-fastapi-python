@@ -259,10 +259,12 @@ class OrderBase(BaseModel):
 
 class OrderRequest(BaseModel):
     order_id: int
+
 class OrderCreate(OrderBase):
     pass
 
-
+class InitiatePaymentResponse(BaseModel):
+    payment_url: HttpUrl
 # Payment Schema
 class PaymentBase(BaseModel):
     order_id: int

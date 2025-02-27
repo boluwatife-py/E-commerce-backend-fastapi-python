@@ -166,7 +166,6 @@ class OrderItem(Base):
     def __repr__(self):
         return f"<OrderItem {self.quantity} x Product {self.product_id or 'DELETED'} (Order {self.order_id})>"
 
-    
 
 class Payment(Base):
     __tablename__ = "payments"
@@ -312,7 +311,6 @@ class ProductReport(Base):
     product = relationship("Product", back_populates="reports")
     reported_by = relationship("User", foreign_keys=[user_id], back_populates="reports_made")
     reported_seller = relationship("User", foreign_keys=[seller_id], back_populates="reports_received")
-
 
 class PasswordResetToken(Base):
     __tablename__ = "password_reset_tokens"

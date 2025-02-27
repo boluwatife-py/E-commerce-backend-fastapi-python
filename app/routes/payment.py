@@ -1,4 +1,4 @@
-import httpx
+import httpx, json
 from fastapi import APIRouter, HTTPException, Depends, Query
 from typing import Annotated
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -103,10 +103,12 @@ async def verify_payment(
     db: AsyncSession = Depends(get_db),
 ):
     try:
+        # ✅ Use trxref if reference is not provided
         payment_reference = reference
         if not payment_reference:
             raise HTTPException(status_code=400, detail="Payment reference is missing.")
 
+        # ✅ Step 1: Verify payment with Paystack API
         async with httpx.AsyncClient() as client:
             response = await client.get(
                 f"https://api.paystack.co/transaction/verify/{payment_reference}",
@@ -114,18 +116,24 @@ async def verify_payment(
             )
         
         data = response.json()
-        
         if not data.get("status"):
             raise HTTPException(status_code=400, detail=f"Paystack Error: {data.get('message')}")
 
         transaction_data = data.get("data", {})
-        metadata = transaction_data.get("metadata", {})
+        metadata = transaction_data.get("metadata", "")
 
-        order_id = metadata.get("order_id")
+        # ✅ Fix: Convert metadata string to dictionary if necessary
+        if isinstance(metadata, str) and metadata:
+            try:
+                metadata = json.loads(metadata)
+            except json.JSONDecodeError:
+                raise HTTPException(status_code=400, detail="Invalid metadata format from Paystack.")
+
+        order_id = metadata.get("order_id") if isinstance(metadata, dict) else None
         if not order_id:
             raise HTTPException(status_code=400, detail="Order ID is missing in Paystack metadata.")
 
-
+        # ✅ Step 2: Fetch the order from the database
         query = select(Order).filter(Order.order_id == order_id, Order.user_id == current_user.user_id)
         result = await db.execute(query)
         order: Order = result.scalars().first()
@@ -133,16 +141,16 @@ async def verify_payment(
         if not order:
             raise HTTPException(status_code=404, detail="Order not found.")
 
-
+        # ✅ Step 3: Check if payment was successful
         payment_status = transaction_data.get("status")
         if payment_status != "success":
             raise HTTPException(status_code=400, detail="Payment was not successful.")
 
-
+        # ✅ Step 4: Update Order Payment Status
         order.order_payment_status = "completed"
         order.order_status = "processing"
 
-        await db.flush()
+        await db.flush()  # Ensure changes are saved before commit
         await db.commit()
 
         return {
@@ -152,8 +160,8 @@ async def verify_payment(
         }
 
     except HTTPException as http_exc:
-        raise http_exc
+        raise http_exc  # Re-raise known HTTP errors
 
-    # except Exception as e:
-    #     print(f"Error verifying payment: {e}")
-    #     raise HTTPException(status_code=500, detail="Unexpected error occurred while verifying payment.")
+    except Exception as e:
+        print(f"Error verifying payment: {e}")  # Log for debugging
+        raise HTTPException(status_code=500, detail="Unexpected error occurred while verifying payment.")

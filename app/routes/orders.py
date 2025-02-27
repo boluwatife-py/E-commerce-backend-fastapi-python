@@ -15,63 +15,6 @@ from datetime import timedelta, datetime
 
 router = APIRouter(tags=["Orders"])
 
-
-@router.post('/review/{order_id}/order')
-def check_order_status(
-    user: Annotated[User, Depends(require_complete_data())],
-    order_id: int,
-    db: AsyncSession = Depends(get_db),
-):
-    try:
-        order: Order = db.query(Order).filter(Order.order_id == order_id).first()
-
-        if not order:
-            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail='Order not found.')
-        
-        if order.user_id != user.user_id:
-            raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail='You are not authorized to review this order.')
-
-        issues = []
-
-        for order_item in order.order_items:
-            product = order_item.product
-
-            if not product:
-                issues.append({
-                    "order_item_id": order_item.order_item_id,
-                    "issue": "Product has been deleted."
-                })
-                continue
-
-            if product.stock_quantity < order_item.quantity:
-                issues.append({
-                    "order_item_id": order_item.order_item_id,
-                    "issue": "Not enough stock available."
-                })
-
-            if product.price != order_item.unit_price:
-                issues.append({
-                    "order_item_id": order_item.order_item_id,
-                    "issue": f"Price changed from {order_item.unit_price} to {product.price}."
-                })
-
-        if issues:
-            return {
-                "status": "Review Needed",
-                "issues": issues
-            }
-
-        return {
-            "status": "Valid",
-            "message": "Order items are valid for processing."
-        }
-
-    except HTTPException:
-        raise
-    except Exception as e:
-        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail='An unexpected error occurred.')
-
-
 @router.get('/', response_model=list[OrderBase])
 def get_user_orders(
     user: Annotated[User, Depends(require_complete_data())],
@@ -86,6 +29,7 @@ def get_user_orders(
         order_response = []
         for order in orders:
             order_response.append(OrderBase(
+                order_id=order.order_id,
                 total_amount=order.total_amount,
                 order_status=order.order_status,
                 order_payment_status=order.order_payment_status,
@@ -285,3 +229,60 @@ def delete_order(
         raise
     except Exception as e:
         raise HTTPException(status_code=500, detail="An unexpected error occurred.")
+
+
+@router.post('/review/{order_id}/order')
+def check_order_status(
+    user: Annotated[User, Depends(require_complete_data())],
+    order_id: int,
+    db: AsyncSession = Depends(get_db),
+):
+    try:
+        order: Order = db.query(Order).filter(Order.order_id == order_id).first()
+
+        if not order:
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail='Order not found.')
+        
+        if order.user_id != user.user_id:
+            raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail='You are not authorized to review this order.')
+
+        issues = []
+
+        for order_item in order.order_items:
+            product = order_item.product
+
+            if not product:
+                issues.append({
+                    "order_item_id": order_item.order_item_id,
+                    "issue": "Product has been deleted."
+                })
+                continue
+
+            if product.stock_quantity < order_item.quantity:
+                issues.append({
+                    "order_item_id": order_item.order_item_id,
+                    "issue": "Not enough stock available."
+                })
+
+            if product.price != order_item.unit_price:
+                issues.append({
+                    "order_item_id": order_item.order_item_id,
+                    "issue": f"Price changed from {order_item.unit_price} to {product.price}."
+                })
+
+        if issues:
+            return {
+                "status": "Review Needed",
+                "issues": issues
+            }
+
+        return {
+            "status": "Valid",
+            "message": "Order items are valid for processing."
+        }
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail='An unexpected error occurred.')
+

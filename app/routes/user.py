@@ -1,10 +1,10 @@
 from fastapi import APIRouter, Depends, HTTPException, BackgroundTasks, status
 from core.database import get_db
-from app.models import User, Otp, UserData
-from core.auth import require_role, get_current_user, create_otp, require_user_profile, require_complete_data
-from typing import Annotated
+from app.models import User, Otp, UserData, Product
+from core.auth import get_current_user, create_otp, require_user_profile, require_complete_data, require_role
+from typing import Annotated, List
 from core.email_utils import successful_upgrade_email_m
-from app.schemas import OTPRequest, OTPVerify, ProfileUpdate, PhoneNumberUpdateResponse, OTPRequestResponse, ProfileUpdateResponse, RoleUpdateResponse, UserDataResponse
+from app.schemas import (OTPRequest, OTPVerify, ProfileUpdate, PhoneNumberUpdateResponse, OTPRequestResponse, ProfileUpdateResponse, RoleUpdateResponse, UserDataResponse, ProductResponse, CategoryResponse, ProductImageResponse, CurrencyResponse)
 from app.crud import get_user_by_phone
 from sqlalchemy.ext.asyncio import AsyncSession
 from core.message_utils import send_otp_sms
@@ -67,7 +67,6 @@ async def request_to_add_phone(
         db.rollback()
         raise HTTPException(status_code=500, detail="An unexpected error occurred")
 
-
 @router.post('/verify/phone/')
 async def verify_phone_otp(
     current_user: Annotated[User, Depends(get_current_user)],
@@ -127,7 +126,6 @@ async def verify_phone_otp(
         print(e)
         raise HTTPException(status_code=500, detail="An unexpected error occurred.")
 
-
 @router.post('/profile/data/', response_model=ProfileUpdateResponse)
 def update_profile(
     current_user: Annotated[User, Depends(require_user_profile())],
@@ -159,18 +157,18 @@ def update_profile(
 
 @router.get('/user/profile/data/')
 def get_user_profile(
-    user: Annotated[User, Depends(get_current_user)],
-    db: AsyncSession = Depends(get_db),
+    user: Annotated[User, Depends(get_current_user)]
 ) -> UserDataResponse:
     try:
         return UserDataResponse(
             first_name = user.first_name,
             last_name = user.last_name,
             email = user.email,
+            role = user.role,
             phone = user.data.phone,
             country = user.data.country,
             state = user.data.state,
-            city = user.dtaa.city,
+            city = user.data.city,
             address = user.data.address,
             zip_code = user.data.zip_code,
         )
@@ -205,3 +203,63 @@ def upgrade_to_merchant(
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"An unexpected error occurred: {str(e)}")
 
+
+@router.get("/product/admin/all/", response_model=List[ProductResponse])
+def get_all_user_products(
+    user: User = Depends(require_role(['merchant'])),
+    db: AsyncSession = Depends(get_db)
+):
+    try:
+        products: Product = db.query(Product).filter(Product.seller_id == user.user_id).all()
+
+        if not products:
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Product not found")
+        
+        product_responses = []
+        for product in products:
+            first_image_url = None
+            if product.product_images:
+                first_image = min(product.product_images, key=lambda img: img.rank)
+                first_image_url = first_image.image_url
+
+            
+            category_response = None
+            if product.category:
+                category_response = CategoryResponse(
+                    category_id=product.category.category_id,
+                    name=product.category.name
+                )
+
+            currency_response = None
+            if product.currency:
+                currency_response = CurrencyResponse(
+                    code=product.currency.code,
+                    name=product.currency.name,
+                    symbol=product.currency.symbol
+                )
+
+            product_responses.append(
+                ProductResponse(
+                    product_id=product.product_id,
+                    name=product.name,
+                    description=product.description,
+                    price=float(product.price) if product.price else None,
+                    stock_quantity=product.stock_quantity,
+                    brand=product.brand,
+                    status=product.status,
+                    seller_id=product.seller_id,
+                    created_at=product.created_at,
+                    updated_at=product.updated_at,
+                    reviews=[],
+                    images=[ProductImageResponse(id=0, image_url=first_image_url, rank=0)] if first_image_url else [],
+                    category=category_response,
+                    currency=currency_response,
+                )
+            )
+
+        return product_responses
+    except HTTPException as http_exc:
+        raise http_exc
+
+    except Exception:
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="An unexpected error occurred.")

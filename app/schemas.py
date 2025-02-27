@@ -29,6 +29,7 @@ class UserDataResponse(BaseModel):
     first_name: str = Field(..., example="John")
     last_name: str = Field(..., example="Doe")
     email: EmailStr = Field(..., example="John@example.com")
+    role: str
     phone: str | None
     country: str | None
     state: str | None
@@ -248,6 +249,7 @@ class OrderItemResponse(BaseModel):
     product_name: str | None
 
 class OrderBase(BaseModel):
+    order_id: int
     total_amount: Decimal
     order_status: OrderStatus = OrderStatus.pending
     order_payment_status: PaymentStatus = PaymentStatus.pending

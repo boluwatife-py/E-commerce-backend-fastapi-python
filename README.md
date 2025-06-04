@@ -20,19 +20,8 @@ A simple Ecommerce API built with Fast API Framework
 
 ## Demo
 
-> [!IMPORTANT]
-> The Render.com free plan may experience a short delay (approximately 1 minute) when starting up. Please be patient for the initial access.
-
-- **Render.com**
-	- [Swagger](https://ecommerce-jgao.onrender.com/docs)
-	- [ReDoc](https://ecommerce-jgao.onrender.com/redoc)
-
 - **Online Code**
-	- [Github1s](https://github1s.com/aliseyedi01/Ecommerce-Api)
-
-- **Database**
-	- [dbdiagram](https://dbdiagram.io/d/6574832756d8064ca0b3b776)
-
+	- [Github](https://github.com/boluwatife-py/E-commerce-backend-fastapi-python)
 
 ## Features
 
@@ -104,17 +93,17 @@ A simple Ecommerce API built with Fast API Framework
 
 ## Screenshots 
 
-![image](https://github.com/aliseyedi01/Ecommerce-Api/assets/118107025/d7262b0d-161c-4324-b343-27eeb0ec302a)
+![image](https://github.com/boluwatife-py/E-commerce-backend-fastapi-python/assets/118107025/d7262b0d-161c-4324-b343-27eeb0ec302a)
 
 
-![image](https://github.com/aliseyedi01/Ecommerce-Api/assets/118107025/0d8bc0bf-0eac-4e96-812d-f3e09783efb0)
+![image](https://github.com/boluwatife-py/E-commerce-backend-fastapi-python/assets/118107025/0d8bc0bf-0eac-4e96-812d-f3e09783efb0)
 
 ## Installation
 
 1. **Clone the repository:**
 
    ```bash
-   git clone https://github.com/aliseyedi01/Ecommerce-Api.git
+   git clone https://github.com/boluwatife-py/E-commerce-backend-fastapi-python.git
    ```
 
 2. **Navigate to the project directory:**
